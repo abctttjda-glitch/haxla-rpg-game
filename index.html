@@ -167,7 +167,7 @@ function runLogQueue(){
  const line = logQueue.shift();
  log.innerHTML = line + "<br>" + log.innerHTML;
  log.scrollTop = 0;
- logTimer = setTimeout(runLogQueue, 400);
+ logTimer = setTimeout(runLogQueue, 300);
 }
 
 /* ===== 成長 ===== */
@@ -180,7 +180,7 @@ function gainExp(c,val){
   c.maxHp+=10;
   c.atk+=2;
   c.def+=1;
-  addLog(c.name+" LvUP!");
+  addLog(c.name+" が LvUP！");
  }
 }
 
@@ -191,10 +191,10 @@ function initParty(){
   } else {
     party.forEach(c=>{
       const j=JOBS[c.job];
-      c.maxHp = j.hp + bonus.hp + (c.level-1)*10;
-      c.atk = j.atk + bonus.atk + (c.level-1)*2;
-      c.def = j.def + bonus.def + (c.level-1);
-      if(c.hp>c.maxHp)c.hp=c.maxHp;
+      c.maxHp=j.hp+bonus.hp + (c.level-1)*10;
+      c.atk=j.atk+bonus.atk + (c.level-1)*2;
+      c.def=j.def+bonus.def + (c.level-1);
+      if(c.hp>c.maxHp) c.hp=c.maxHp;
       c.alive = c.hp>0;
     });
   }
@@ -202,45 +202,45 @@ function initParty(){
 
 /* ===== バトル ===== */
 function battle(end){
-  enemy.hp = enemy.hp>0?enemy.hp:enemy.maxHp;
-  const it = setInterval(()=>{
-    // パーティ攻撃
-    party.forEach(c=>{
-      if(!c.alive) return;
-      const dmg=Math.max(1,c.atk-enemy.def);
-      enemy.hp-=dmg;
-      if(enemy.hp<0) enemy.hp=0;
-      addLog(`${c.name} は ${enemy.name} に ${dmg} のダメージ！`);
-    });
-    updateEnemyUI();
+ enemy.hp = enemy.hp>0?enemy.hp:enemy.maxHp;
+ const it=setInterval(()=>{
+   // パーティ攻撃
+   party.forEach(c=>{
+     if(!c.alive) return;
+     const dmg=Math.max(1,c.atk-enemy.def);
+     enemy.hp-=dmg;
+     if(enemy.hp<0) enemy.hp=0;
+     addLog(`${c.name} は ${enemy.name} に ${dmg} ダメージ`);
+   });
+   updateEnemyUI();
 
-    if(enemy.hp<=0){
-      clearInterval(it);
-      kills++;
-      party.forEach(c=>gainExp(c,5));
-      addLog(`${enemy.name} を倒した！`);
-      if(kills%10===0){holy++; addLog("聖杯Pt +1"); if(autoUpgrade) autoSpend();}
-      floor++;
-      updateUI();
-      end();
-      return;
-    }
+   if(enemy.hp<=0){
+     clearInterval(it);
+     kills++;
+     party.forEach(c=>gainExp(c,5));
+     addLog(`${enemy.name} を倒した！`);
+     if(kills%10===0){holy++; addLog("聖杯Pt +1"); if(autoUpgrade) autoSpend();}
+     floor++;
+     updateUI();
+     end();
+     return;
+   }
 
-    // 敵攻撃
-    const t = party.find(c=>c.alive);
-    if(!t){
-      party.forEach(c=>{c.hp=c.maxHp;c.alive=true;});
-      addLog("全滅→復活");
-      updateUI();
-      return;
-    }
-    const dmg=Math.max(1,enemy.atk-t.def);
-    t.hp-=dmg;
-    if(t.hp<0)t.hp=0;
-    addLog(`${enemy.name} は ${t.name} に ${dmg} のダメージ！`);
-    if(t.hp<=0){t.alive=false; addLog(`${t.name} は倒れた！`);}
-    updateUI();
-  },800/SPEED);
+   // 敵攻撃
+   const t = party.find(c=>c.alive);
+   if(!t){
+     party.forEach(c=>{c.hp=c.maxHp;c.alive=true;});
+     addLog("全滅→復活");
+     updateUI();
+     return;
+   }
+   const dmg=Math.max(1,enemy.atk-t.def);
+   t.hp-=dmg;
+   if(t.hp<0) t.hp=0;
+   addLog(`${enemy.name} は ${t.name} に ${dmg} ダメージ`);
+   if(t.hp<=0){t.alive=false; addLog(`${t.name} は倒れた！`);}
+   updateUI();
+ },800/SPEED);
 }
 
 /* ===== 操作 ===== */
@@ -257,10 +257,10 @@ function updateUI(){
  holyEl.textContent=holy;
  partyEl.innerHTML="";
  party.forEach(c=>{
-  const d=document.createElement("div");
-  d.className="partyRow "+(c.alive?"":"dead");
-  d.textContent=`${c.name} Lv${c.level} HP${c.hp}/${c.maxHp} ATK${c.atk} DEF${c.def}`;
-  partyEl.appendChild(d);
+   const d=document.createElement("div");
+   d.className="partyRow "+(c.alive?"":"dead");
+   d.textContent=`${c.name} Lv${c.level} HP${c.hp}/${c.maxHp} ATK${c.atk} DEF${c.def}`;
+   partyEl.appendChild(d);
  });
 }
 function updateEnemyUI(){
@@ -271,9 +271,9 @@ function updateEnemyUI(){
 
 /* ===== セーブ/ロード ===== */
 function save(){
- const data = {
-  floor,kills,holy,bonus,autoUpgrade,
-  party:party.map(c=>({name:c.name,job:c.job,level:c.level,exp:c.exp,hp:c.hp,maxHp:c.maxHp,atk:c.atk,def:c.def,alive:c.alive}))
+ const data={
+   floor,kills,holy,bonus,autoUpgrade,
+   party:party.map(c=>({name:c.name,job:c.job,level:c.level,exp:c.exp,hp:c.hp,maxHp:c.maxHp,atk:c.atk,def:c.def,alive:c.alive}))
  };
  localStorage.setItem("holyRPG",JSON.stringify(data));
 }
