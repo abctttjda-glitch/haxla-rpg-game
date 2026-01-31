@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>Slayer's Log v3.9.0</title>
+<title>Slayer's Log v4.0.0</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <style>
 :root { --bg: #050505; --panel: #111; --accent: #d4af37; --text: #ccc; --border: #222; }
@@ -56,57 +56,53 @@ button:disabled { opacity: 0.1; }
 </div>
 
 <div id="questM" class="modal"><div class="modal-content"><h3>⚔️ ギルド依頼</h3><div id="qList"></div><br><button onclick="closeM('questM')" style="width:100%">閉じる</button></div></div>
-
-<div id="skillM" class="modal"><div class="modal-content"><h3>🎓 スキルツリー (SP:<span id="mSp">0</span>)</h3><div id="sList"></div><br><button onclick="closeM('skillM')" style="width:100%">閉じる</button></div></div>
-
+<div id="skillM" class="modal"><div class="modal-content"><h3>🎓 スキル強化 (SP:<span id="mSp">0</span>)</h3><div id="sList"></div><br><button onclick="closeM('skillM')" style="width:100%">閉じる</button></div></div>
 <div id="equipM" class="modal"><div class="modal-content"><h3>📦 インベントリ</h3><div id="iList"></div><br><button onclick="closeM('equipM')" style="width:100%">閉じる</button></div></div>
 
 <script>
-const SAVE_KEY = "SlayerLog_v3.9";
-let sp=0, step=0, dungeonIdx=0, inBattle=false;
-let hero = { lv:1, exp:0, hp:100, maxHp:100, atk:10, def:10, eq:{w:null, a:null, r:null} };
-let inventory = [], skills = {};
+const SAVE_KEY = "SlayerLog_v4.0";
+let sp=0, step=0, dIdx=0, inBattle=false;
+let hero = { lv:1, exp:0, hp:120, maxHp:120, atk:15, def:12, eq:{w:null, a:null, r:null} };
+let inventory = [], skills = {}; // skills[id] = level
 
 const DUNGEONS = [
-    { n: "薄暗い地下水道", pow: 1, boss: "下水道の王 ラット" },
-    { n: "霧深い亡霊の森", pow: 8, boss: "古の霊樹 エント" },
-    { n: "灼熱の溶岩洞窟", pow: 30, boss: "焔の魔人 スルト" }
+    { n: "静かな地下水道", pow: 0.3, boss: "巨大ネズミ", exp: 25 },
+    { n: "亡霊の森", pow: 1.5, boss: "呪われたトレント", exp: 50 },
+    { n: "溶岩洞窟", pow: 5.0, boss: "火竜の雛", exp: 120 }
 ];
 
 const SKILL_TREE = [
-    { id:"p1", n:"剛力 I", d:"ATK +15", sp:1, eff:{atk:15} },
-    { id:"p2", n:"剛力 II", d:"ATK +40", sp:2, eff:{atk:40} },
-    { id:"p3", n:"一閃", d:"10%でダメージ3倍", sp:3, eff:{crit:0.1} },
-    { id:"m1", n:"知恵 I", d:"獲得EXP +20%", sp:1, eff:{exp:1.2} },
-    { id:"m2", n:"知恵 II", d:"獲得EXP +50%", sp:2, eff:{exp:1.5} },
-    { id:"m3", n:"魔力盾", d:"最大HP +500", sp:3, eff:{hp:500} },
-    { id:"t1", n:"守護 I", d:"DEF +15", sp:1, eff:{def:15} },
-    { id:"t2", n:"守護 II", d:"DEF +40", sp:2, eff:{def:40} },
-    { id:"t3", n:"金剛", d:"DEF +100", sp:3, eff:{def:100} }
+    { id:"s_atk", n:"腕力", d:"ATK+5", max:5, eff:{atk:5} },
+    { id:"s_def", n:"頑強", d:"DEF+5", max:5, eff:{def:5} },
+    { id:"s_hp", n:"生命", d:"HP+100", max:5, eff:{hp:100} },
+    { id:"s_exp", n:"学習", d:"EXP+10%", max:3, eff:{exp:0.1} },
+    { id:"s_crit", n:"会心", d:"会心率+3%", max:5, eff:{crit:0.03} }
 ];
 
 function generateEnemyName(isBoss) {
-    if(isBoss) return DUNGEONS[dungeonIdx].boss;
-    const pre = ["飢えた", "彷徨う", "穢れた", "狂暴な", "漆黒の", "呪われた"];
-    const mid = ["ゴブリン", "スケルトン", "ウルフ", "スライム", "バット", "オーク"];
+    if(isBoss) return DUNGEONS[dIdx].boss;
+    const pre = ["臆病な", "のろまな", "迷い込んだ", "腹ペこな", "小さな"];
+    const mid = ["スライム", "バット", "コボルト", "幼虫", "影"];
     return pre[Math.floor(Math.random()*pre.length)] + mid[Math.floor(Math.random()*mid.length)];
 }
 
 function updateUI() {
-    let sA=0, sD=0, sH=0;
-    Object.keys(skills).forEach(id => {
-        const s = SKILL_TREE.find(x=>x.id===id);
-        if(s.eff.atk) sA += s.eff.atk;
-        if(s.eff.def) sD += s.eff.def;
-        if(s.eff.hp) sH += s.eff.hp;
+    let sA=0, sD=0, sH=0, sCr=0;
+    SKILL_TREE.forEach(s => {
+        const lv = skills[s.id] || 0;
+        if(s.eff.atk) sA += s.eff.atk * lv;
+        if(s.eff.def) sD += s.eff.def * lv;
+        if(s.eff.hp) sH += s.eff.hp * lv;
+        if(s.eff.crit) sCr += s.eff.crit * lv;
     });
     let eA=0, eD=0, eH=0;
     ['w','a','r'].forEach(t => { if(hero.eq[t]) { eA += hero.eq[t].atk; eD += hero.eq[t].def; eH += hero.eq[t].hp; } });
 
-    const g = 1 + (hero.lv - 1) * 0.08;
-    hero.maxHp = Math.floor((150 + sH + eH + (hero.lv-1)*40) * g);
-    hero.atk = Math.floor((12 + sA + eA + (hero.lv-1)*6) * g);
-    hero.def = Math.floor((8 + sD + eD + (hero.lv-1)*5) * g);
+    const g = 1 + (hero.lv - 1) * 0.05;
+    hero.maxHp = Math.floor((120 + sH + eH + (hero.lv-1)*20) * g);
+    hero.atk = Math.floor((15 + sA + eA + (hero.lv-1)*4) * g);
+    hero.def = Math.floor((12 + sD + eD + (hero.lv-1)*3) * g);
+    hero.critRate = sCr;
 
     document.getElementById("hLv").innerText = hero.lv;
     document.getElementById("hHp").innerText = `${Math.floor(hero.hp)}/${hero.maxHp}`;
@@ -126,22 +122,22 @@ function addLog(msg, type="") {
 }
 
 function startDungeon(idx) {
-    dungeonIdx = idx; step = 0; closeM('questM');
+    dIdx = idx; step = 0; closeM('questM');
     document.getElementById("dName").innerText = DUNGEONS[idx].n;
-    addLog(`${DUNGEONS[idx].n} へ出発。`);
+    addLog(`${DUNGEONS[idx].n} へ足を踏み入れた。`);
     nextBattle();
 }
 
 function nextBattle() {
     if(inBattle) return;
     step++;
-    if(step > 10) { addLog(`依頼完了。街へ帰還。`, "log-win"); step = 1; save(); }
+    if(step > 10) { addLog(`エリア踏破。`, "log-win"); step = 1; save(); }
     const isB = (step === 10);
-    const p = DUNGEONS[dungeonIdx].pow * (isB ? 4 : 1);
+    const p = DUNGEONS[dIdx].pow * (isB ? 3 : 1);
     const enemy = {
         name: generateEnemyName(isB),
-        hp: (100 + hero.lv * 80) * p,
-        atk: (10 + hero.lv * 8) * p,
+        hp: (50 + hero.lv * 30) * p,
+        atk: (5 + hero.lv * 3) * p,
         maxHp: 0
     };
     enemy.maxHp = enemy.hp;
@@ -152,46 +148,47 @@ function nextBattle() {
 function runBattle(e, isB) {
     inBattle = true;
     const it = setInterval(() => {
-        let d = Math.max(1, hero.atk - (e.atk*0.1));
-        if(skills.p3 && Math.random()<0.1) d *= 3;
+        let d = Math.max(1, hero.atk - (e.atk*0.05));
+        if(Math.random() < hero.critRate) { d *= 2; addLog(`会心の一撃！`, "log-win"); }
         e.hp -= d;
 
         if(e.hp <= 0) {
             clearInterval(it);
-            addLog(`${e.name} を撃破。`);
-            let expG = 40; if(skills.m1) expG *= 1.2; if(skills.m2) expG *= 1.5;
-            hero.exp += expG;
-            if(hero.exp >= 100) { hero.lv++; hero.exp=0; sp++; addLog(`勇者のLvが ${hero.lv} に上昇！`, "log-win"); }
-            if(isB || Math.random() < 0.2) dropItem(DUNGEONS[dungeonIdx].pow);
+            addLog(`${e.name} を倒した。`);
+            let bonusExp = 1 + (skills['s_exp'] || 0) * 0.1;
+            hero.exp += DUNGEONS[dIdx].exp * bonusExp;
+            if(hero.exp >= 100) { hero.lv++; hero.exp=0; sp++; addLog(`LvUP! SPを1獲得。`, "log-win"); }
+            if(isB || Math.random() < 0.15) dropItem(DUNGEONS[dIdx].pow);
             inBattle = false; save(); updateUI();
-            setTimeout(nextBattle, 400);
+            setTimeout(nextBattle, 500);
         } else {
-            hero.hp -= Math.max(1, e.atk - hero.def);
+            let dmg = Math.max(1, e.atk - hero.def);
+            hero.hp -= dmg;
             document.getElementById("eHpFill").style.width = (e.hp/e.maxHp*100) + "%";
             document.getElementById("eHpNum").innerText = Math.floor(e.hp);
             updateUI();
             if(hero.hp <= 0) {
                 clearInterval(it);
-                addLog(`勇者は敗北した...`, "log-die");
+                addLog(`撤退を余儀なくされた...`, "log-die");
                 hero.hp = hero.maxHp; inBattle = false;
-                setTimeout(nextBattle, 400);
+                setTimeout(nextBattle, 1000);
             }
         }
-    }, 100);
+    }, 150);
 }
 
 function dropItem(pow) {
     const types = [{t:'w',n:'剣'}, {t:'a',n:'鎧'}, {t:'r',n:'指輪'}];
     const tt = types[Math.floor(Math.random()*3)];
-    const rarity = ["古びた", "鉄の", "魔石の", "深淵の", "王家の"][Math.min(4, Math.floor(Math.random()*pow))];
+    const rarity = ["粗末な", "並の", "良質な", "名匠の", "王家の"][Math.min(4, Math.floor(pow))];
     const item = {
         id: Date.now(), type: tt.t, name: `${rarity}${tt.n}`,
-        atk: tt.t === 'w' ? Math.floor(pow*25 + Math.random()*20) : 0,
-        def: tt.t === 'a' ? Math.floor(pow*20 + Math.random()*15) : 0,
-        hp: tt.t === 'r' ? Math.floor(pow*200 + Math.random()*100) : 0
+        atk: tt.t === 'w' ? Math.floor(5 + pow*10) : 0,
+        def: tt.t === 'a' ? Math.floor(4 + pow*8) : 0,
+        hp: tt.t === 'r' ? Math.floor(50 + pow*100) : 0
     };
     inventory.push(item);
-    addLog(`「${item.name}」を拾った！`, "log-get");
+    addLog(`「${item.name}」を入手！`, "log-get");
 }
 
 function openM(id) {
@@ -202,20 +199,20 @@ function openM(id) {
         d.innerHTML += `<button style="width:100%; margin-bottom:5px;" onclick="startDungeon(${i})">${q.n}</button>`;
     });
     if(id==='skillM') SKILL_TREE.forEach(s => {
-        const has = skills[s.id];
-        d.innerHTML += `<div class="tree-node"><div><b>${s.n}</b><br><small>${s.d}</small></div>
-            <button onclick="buyS('${s.id}',${s.sp})" ${has||sp<s.sp?'disabled':''}>${has?'習得済':'習得'}</button></div>`;
+        const lv = skills[s.id] || 0;
+        d.innerHTML += `<div class="tree-node"><div><b>${s.n} Lv.${lv}/${s.max}</b><br><small>${s.d}</small></div>
+            <button onclick="buyS('${s.id}')" ${lv>=s.max||sp<1?'disabled':''}>強化</button></div>`;
     });
     if(id==='equipM') inventory.forEach(item => {
         const isEq = Object.values(hero.eq).some(e => e && e.id === item.id);
         d.innerHTML += `<div class="item-card"><b>${item.name}</b> ${isEq?'[装備中]':''}<br>
-            ATK:${item.atk} DEF:${item.def} HP:${item.hp}<br>
+            A:${item.atk} D:${item.def} H:${item.hp}<br>
             <button onclick="equipI(${item.id})" ${isEq?'disabled':''}>装備</button>
             <button onclick="sellI(${item.id})">廃棄</button></div>`;
     });
 }
 
-function buyS(id, c) { if(sp >= c) { sp -= c; skills[id] = true; updateUI(); save(); openM('skillM'); } }
+function buyS(id) { if(sp >= 1) { sp--; skills[id] = (skills[id]||0) + 1; updateUI(); save(); openM('skillM'); } }
 function equipI(id) { 
     const item = inventory.find(i => i.id === id);
     hero.eq[item.type] = item; updateUI(); save(); openM('equipM');
@@ -228,18 +225,17 @@ function sellI(id) {
 function closeM(id) { document.getElementById(id).style.display = "none"; }
 
 function save() {
-    const d = { h:hero, s:skills, i:inventory, sp, dIdx:dungeonIdx };
+    const d = { h:hero, s:skills, i:inventory, sp, dIdx };
     localStorage.setItem(SAVE_KEY, JSON.stringify(d));
 }
 function load() {
     const s = localStorage.getItem(SAVE_KEY);
     if(s) {
-        const d = JSON.parse(s); hero=d.h; skills=d.s; inventory=d.i; sp=d.sp; dungeonIdx=d.dIdx;
+        const d = JSON.parse(s); hero=d.h; skills=d.s; inventory=d.i; sp=d.sp; dIdx=d.dIdx;
     }
     hero.hp = hero.maxHp;
 }
-load(); updateUI(); startDungeon(dungeonIdx);
+load(); updateUI(); startDungeon(dIdx);
 </script>
 </body>
 </html>
-
