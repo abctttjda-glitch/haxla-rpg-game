@@ -2,74 +2,72 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>Ultimate Job Master v4.5.0</title>
+<title>Job Master Tower v4.6.0</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <style>
 :root { --bg: #050505; --panel: #111; --accent: #d4af37; --text: #ccc; --border: #333; }
 * { touch-action: manipulation; box-sizing: border-box; -webkit-user-select: none; }
 body { margin:0; background:var(--bg); color:var(--text); font-family: 'Consolas', monospace; height: 100dvh; display:flex; flex-direction:column; padding:8px; overflow:hidden; }
-button { background:#222; color:#eee; border:1px solid #444; border-radius:4px; cursor:pointer; padding:10px; font-size:12px; }
+button { background:#222; color:#eee; border:1px solid #444; border-radius:4px; cursor:pointer; padding:8px; font-size:11px; }
 button:active { background: #444; }
-button.active-toggle { background: #006400; border-color: #0f0; }
+.active-toggle { background: #006400; border-color: #0f0; }
 
-.tower-header { display: flex; justify-content: space-between; align-items: center; background: #1a1a1a; border: 1px solid var(--border); padding: 6px; margin-bottom: 4px; }
+/* メインUI */
+.hero-status-panel { background:var(--panel); border:1px solid var(--accent); padding:10px; border-radius:4px; margin-bottom:6px; display:grid; grid-template-columns: 1fr 1.5fr; gap:10px; }
+.exp-bar { width: 100%; background: #222; height: 5px; margin-top: 4px; }
+.exp-fill { background: #3498db; height: 100%; width: 0%; transition: width 0.3s; }
+
 .enemy-box { text-align: center; padding: 10px; border: 1px solid var(--border); background: #000; margin-bottom: 6px; }
-.hp-bar { width: 100%; background:#200; height:12px; border:1px solid #400; margin-top:4px; position:relative; }
-.hp-fill { background:linear-gradient(90deg, #900, #f00); height:100%; width:100%; transition: width 0.1s; }
+.hp-bar { width: 100%; background:#200; height:12px; border:1px solid #400; margin-top:4px; }
+.hp-fill { background:linear-gradient(90deg, #900, #f00); height:100%; width:100%; }
 
-/* 消失厳禁：メインステータス欄 */
-.hero-status-panel { background:var(--panel); border:1px solid var(--accent); padding:10px; border-radius:4px; margin-bottom:6px; display:grid; grid-template-columns: 1fr 1.2fr; gap:10px; }
-.hero-status-panel b { color: #fff; }
-.exp-bar-mini { width: 100%; background: #222; height: 4px; margin-top: 4px; }
-.exp-fill-mini { background: #3498db; height: 100%; width: 0%; }
-
-.log-area { flex: 1; background:#000; border:1px solid var(--border); overflow-y:auto; padding:8px; font-size:11px; line-height:1.4; display:flex; flex-direction:column-reverse; margin-bottom:6px; }
+.log-area { flex: 1; background:#000; border:1px solid var(--border); overflow-y:auto; padding:8px; font-size:11px; line-height:1.3; display:flex; flex-direction:column-reverse; margin-bottom:6px; }
 
 .battle-actions { display: flex; gap: 4px; margin-bottom: 8px; }
-#btnAttack { flex: 2; height: 50px; background: #400; font-weight: bold; border: 1px solid #822; }
-#btnAuto { flex: 1; height: 50px; }
+#btnAttack { flex: 2; height: 45px; background: #400; font-weight: bold; border: 1px solid #822; }
 
 .btn-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
 
+/* モーダル共通 */
 .modal { display: none; position: fixed; inset:0; background:rgba(0,0,0,0.98); z-index:100; justify-content:center; align-items:center; }
 .modal-content { background:#111; border:1px solid #333; width:95%; height:92%; padding:15px; overflow-y:auto; }
-.list-row { border-bottom:1px solid #222; padding:12px 0; display:flex; justify-content:space-between; align-items:center; }
+.list-row { border-bottom:1px solid #222; padding:10px 0; }
+.st-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.step-btns button { padding: 4px 8px; margin-left: 2px; }
 </style>
 </head>
 <body>
 
-<div class="tower-header">
-    <button onclick="changeFloor(-1)">◀戻る</button>
-    <b style="color:var(--accent)"><span id="floor">1</span>F</b>
-    <button onclick="changeFloor(1)">進む▶</button>
-</div>
-
 <div class="hero-status-panel">
     <div>
-        <small id="jobLabel" style="color:var(--accent); font-size:10px;">---</small><br>
-        <b style="font-size:18px;">Lv.<span id="hLv">1</span></b><br>
-        <div style="font-size:10px; margin-top:4px;">
-            Next: <span id="nextExp">0</span> EXP
-            <div class="exp-bar-mini"><div id="expFill" class="exp-fill-mini"></div></div>
+        <small id="jobLabel" style="color:var(--accent)">---</small><br>
+        <b style="font-size:16px;">Lv.<span id="hLv">1</span></b><br>
+        <div style="font-size:10px;">
+            Next: <span id="nextExp">0</span><br>
+            <div class="exp-bar"><div id="expFill" class="exp-fill"></div></div>
         </div>
     </div>
-    <div style="font-size:11px; line-height:1.6;">
+    <div style="font-size:11px;">
         HP : <b id="hHp">0/0</b><br>
         ATK: <b id="hAtk">0</b> / DEF: <b id="hDef">0</b><br>
-        PP : <b id="hPp" style="color:#3498db">0</b> / SP : <b id="hSp" style="color:var(--accent)">0</b>
+        PP : <b id="hPp" style="color:#3498db">0</b> / SP: <b id="hSp" style="color:var(--accent)">0</b>
     </div>
 </div>
 
 <div class="enemy-box">
-    <div id="eName" style="font-weight:bold; font-size:14px;">---</div>
+    <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px;">
+        <span onclick="changeFloor(-1)">◀</span>
+        <b id="eName">---</b>
+        <span onclick="changeFloor(1)">▶</span>
+    </div>
     <div class="hp-bar"><div id="eHpFill" class="hp-fill"></div></div>
-    <div id="eHpNum" style="font-size:10px; margin-top:2px;">0 / 0</div>
+    <div id="eHpNum" style="font-size:10px;">0 / 0</div>
 </div>
 
 <div class="log-area" id="log"></div>
 
 <div class="battle-actions">
-    <button id="btnAttack">斬撃</button>
+    <button id="btnAttack">攻撃</button>
     <button id="btnAuto" onclick="toggleAuto()">AUTO: OFF</button>
 </div>
 
@@ -82,37 +80,56 @@ button.active-toggle { background: #006400; border-color: #0f0; }
 
 <div id="statM" class="modal"><div class="modal-content">
     <h3>📊 ステータス強化 (PP:<span id="mPp">0</span>)</h3>
-    <div class="list-row"><span>体力 (HP+10)</span><div style="display:flex; align-items:center; gap:10px;"><button onclick="modST('hp',-1)">-</button><b id="stHp">0</b><button onclick="modST('hp',1)">+</button></div></div>
-    <div class="list-row"><span>腕力 (ATK+1)</span><div style="display:flex; align-items:center; gap:10px;"><button onclick="modST('atk',-1)">-</button><b id="stAtk">0</b><button onclick="modST('atk',1)">+</button></div></div>
-    <div class="list-row"><span>頑強 (DEF+1)</span><div style="display:flex; align-items:center; gap:10px;"><button onclick="modST('def',-1)">-</button><b id="stDef">0</b><button onclick="modST('def',1)">+</button></div></div>
-    <br><button onclick="closeM('statM')" style="width:100%">閉じる</button>
+    <button id="btnAutoAllot" onclick="toggleAutoAllot()">自動ステ振り: OFF</button>
+    <div style="margin:15px 0;">
+        <div class="st-row">
+            <span>力(ATK)</span>
+            <div class="step-btns">
+                <button onclick="modST('atk',1)">+1</button><button onclick="modST('atk',10)">+10</button><button onclick="modST('atk',100)">+100</button>
+            </div>
+        </div>
+        <div class="st-row">
+            <span>守(DEF)</span>
+            <div class="step-btns">
+                <button onclick="modST('def',1)">+1</button><button onclick="modST('def',10)">+10</button><button onclick="modST('def',100)">+100</button>
+            </div>
+        </div>
+        <div class="st-row">
+            <span>命(HPx10)</span>
+            <div class="step-btns">
+                <button onclick="modST('hp',1)">+1</button><button onclick="modST('hp',10)">+10</button><button onclick="modST('hp',100)">+100</button>
+            </div>
+        </div>
+    </div>
+    <button onclick="resetPP()" style="color:#e74c3c">PP全振り直し</button><br><br>
+    <button onclick="closeM('statM')" style="width:100%">閉じる</button>
 </div></div>
 
-<div id="jobM" class="modal"><div class="modal-content"><h3>🛡️ ジョブチェンジ (20種)</h3><div id="jobList"></div><br><button onclick="closeM('jobM')" style="width:100%">戻る</button></div></div>
-<div id="skillM" class="modal"><div class="modal-content"><h3>🎓 <span id="curJobTitle"></span> スキル</h3><div id="sList"></div><br><button onclick="closeM('skillM')" style="width:100%">戻る</button></div></div>
-<div id="equipM" class="modal"><div class="modal-content"><h3>📦 アイテム</h3><div id="iList"></div><br><button onclick="closeM('equipM')" style="width:100%">戻る</button></div></div>
+<div id="jobM" class="modal"><div class="modal-content"><h3>🛡️ ジョブ(20種)</h3><div id="jobList"></div><br><button onclick="closeM('jobM')">戻る</button></div></div>
+<div id="skillM" class="modal"><div class="modal-content"><h3>🎓 <span id="curJobTitle"></span> スキル</h3><div id="sList"></div><br><button onclick="closeM('skillM')">戻る</button></div></div>
+<div id="equipM" class="modal"><div class="modal-content"><h3>📦 アイテム</h3><div id="iList"></div><br><button onclick="closeM('equipM')">戻る</button></div></div>
 
 <script>
-const SAVE_KEY = "Slayer_v4.5.0";
-let floor=1, maxFloor=1, sp=0, pp=0, auto=false, inBattle=false;
+const SAVE_KEY = "Slayer_v4.6.0";
+let floor=1, maxFloor=1, sp=0, pp=0, auto=false, autoAllot=false, inBattle=false;
 let st = { hp:20, atk:10, def:10 }; 
 let hero = { lv:1, exp:0, job:'warrior', eq:{w:null, a:null} };
 let inventory = [], skills = {};
 
-const JOBS = {
-    warrior:"戦士", guardian:"衛兵", rogue:"ならず者", archer:"射手", 
-    mage:"術師", priest:"僧侶", monk:"拳士", samurai:"侍", 
-    ninja:"忍", dragoon:"竜騎士", paladin:"聖騎士", darknight:"暗黒騎士",
-    assassin:"暗殺者", bard:"吟遊詩人", alchemist:"錬金術師", necromancer:"死霊術師",
-    berserker:"狂戦士", sage:"賢者", fencer:"剣士", mechanic:"魔導工学師"
+const JOB_DATA = {
+    warrior: { n:"戦士", s:["強撃", "重装", "一閃", "逆鱗", "不屈", "咆哮", "鍛錬", "突破", "練気", "奥義"] },
+    mage: { n:"魔術師", s:["火炎", "瞑想", "魔力", "雷撃", "詠唱", "吸魔", "結界", "賢知", "増幅", "極大"] },
+    thief: { n:"盗賊", s:["急所", "回避", "強欲", "奇襲", "俊敏", "毒刃", "隠密", "目利き", "逃走", "神速"] },
+    paladin: { n:"聖騎士", s:["献身", "聖盾", "回復", "鉄壁", "加護", "審判", "耐性", "治癒", "威圧", "不滅"] }
+    // ... 他16種
 };
 
 function updateUI() {
-    let sA=0, sD=0, sH=0, sE=0;
+    let sA=0, sD=0, sH=0;
     Object.keys(skills).forEach(j => {
         Object.keys(skills[j]).forEach(sid => {
             const lv = skills[j][sid];
-            if(sid.includes("_p")) { sA += lv*5; sD += lv*3; sH += lv*50; }
+            sA += lv*2; sD += lv*1; sH += lv*20;
         });
     });
     
@@ -123,70 +140,60 @@ function updateUI() {
     hero.atk = st.atk + sA + eA;
     hero.def = st.def + sD + eD;
     
-    const nextExpVal = hero.lv * 50;
+    const nextVal = hero.lv * 60;
     document.getElementById("hLv").innerText = hero.lv;
     document.getElementById("hHp").innerText = `${Math.floor(hero.hp)}/${hero.maxHp}`;
     document.getElementById("hAtk").innerText = hero.atk;
     document.getElementById("hDef").innerText = hero.def;
     document.getElementById("hPp").innerText = pp;
     document.getElementById("hSp").innerText = sp;
-    document.getElementById("nextExp").innerText = nextExpVal - hero.exp;
-    document.getElementById("expFill").style.width = (hero.exp / nextExpVal * 100) + "%";
-    document.getElementById("jobLabel").innerText = JOBS[hero.job];
-    document.getElementById("floor").innerText = floor;
-    
-    document.getElementById("stHp").innerText = st.hp;
-    document.getElementById("stAtk").innerText = st.atk;
-    document.getElementById("stDef").innerText = st.def;
+    document.getElementById("nextExp").innerText = nextVal - hero.exp;
+    document.getElementById("expFill").style.width = (hero.exp / nextVal * 100) + "%";
+    document.getElementById("jobLabel").innerText = (JOB_DATA[hero.job]||{n:hero.job}).n;
     document.getElementById("mPp").innerText = pp;
+    document.getElementById("btnAutoAllot").className = autoAllot ? "active-toggle" : "";
+    document.getElementById("btnAutoAllot").innerText = "自動ステ振り: " + (autoAllot?"ON":"OFF");
 }
 
 function modST(k, v) {
-    if(v > 0 && pp > 0) { st[k]++; pp--; }
-    else if(v < 0 && st[k] > (k==='hp'?10:5)) { st[k]--; pp++; }
+    let amt = Math.min(v, pp);
+    if(amt > 0) { st[k] += amt; pp -= amt; }
     updateUI(); save();
 }
 
-function toggleAuto() {
-    auto = !auto;
-    const btn = document.getElementById("btnAuto");
-    btn.innerText = auto ? "AUTO: ON" : "AUTO: OFF";
-    btn.className = auto ? "active-toggle" : "";
+function resetPP() {
+    pp += (st.hp - 20) + (st.atk - 10) + (st.def - 10);
+    st = { hp:20, atk:10, def:10 };
+    updateUI(); save();
 }
+
+function toggleAutoAllot() { autoAllot = !autoAllot; updateUI(); }
+function toggleAuto() { auto = !auto; document.getElementById("btnAuto").className = auto ? "active-toggle" : ""; }
 
 function addLog(msg, col="") {
     const l = document.getElementById("log");
-    const d = document.createElement("div");
-    if(col) d.style.color = col;
-    d.innerText = `> ${msg}`;
-    l.prepend(d);
+    const d = document.createElement("div"); if(col) d.style.color = col;
+    d.innerText = `> ${msg}`; l.prepend(d);
     if(l.childNodes.length > 25) l.removeChild(l.lastChild);
 }
 
 function changeFloor(v) {
     let n = floor + v;
-    if(n >= 1 && n <= maxFloor) { floor = n; inBattle = false; nextBattle(); }
-}
-
-function generateEName(f) {
-    const p = ["飢えた", "骨の", "影の", "猛る", "朽ちた", "深淵の"];
-    const m = ["ウルフ", "スケルトン", "スライム", "ゴブリン", "リザード", "デーモン"];
-    return p[f % 6] + m[(f*3) % 6] + (f % 50 === 0 ? "・王" : "");
+    if(n >= 1 && n <= maxFloor) { floor = n; inBattle = false; nextBattle(); updateUI(); }
 }
 
 let enemy = null;
 function nextBattle() {
     if(inBattle) return;
     const isB = (floor % 50 === 0);
-    const m = Math.pow(1.07, floor-1) * (isB ? 5 : 1);
+    const m = Math.pow(1.05, floor-1) * (isB ? 4 : 1);
     enemy = {
-        name: generateEName(floor),
-        hp: Math.floor((80 + floor*20) * m),
-        atk: Math.floor((5 + floor*2) * m),
+        name: (isB?"【BOSS】":"") + "階層の守護者 " + floor + "F",
+        hp: Math.floor((100 + floor*15) * m),
+        atk: Math.floor((10 + floor*1.5) * m),
     };
     enemy.maxHp = enemy.hp;
     document.getElementById("eName").innerText = enemy.name;
-    document.getElementById("eName").style.color = isB ? "#f22" : "#ccc";
     inBattle = true; updateE();
 }
 
@@ -201,84 +208,73 @@ function pAtk() {
     enemy.hp -= Math.max(1, hero.atk - enemy.atk*0.05);
     updateE();
     if(enemy.hp <= 0) {
-        const getExp = 15 + floor;
-        addLog(`${enemy.name}を倒した。 ${getExp} EXPを獲得！`, "#2ecc71");
-        hero.exp += getExp;
-        if(hero.exp >= hero.lv * 50) {
-            hero.exp = 0; hero.lv++; pp += 3; sp += 1;
-            addLog(`レベルアップ！ PP+3 SP+1獲得`, "#3498db");
+        const xp = 20 + floor;
+        addLog(`${enemy.name}撃破！ ${xp}EXP獲得`, "#2ecc71");
+        hero.exp += xp;
+        if(hero.exp >= hero.lv * 60) {
+            hero.exp = 0; hero.lv++; pp += 5; sp += 1;
+            if(autoAllot) { 
+                st.atk += 2; st.def += 1; st.hp += 2; pp -= 5; 
+                addLog("自動ステ振り実行 (ATK+2 DEF+1 HP+2)");
+            }
+            addLog(`レベルアップ！ PP+5 SP+1`, "#3498db");
         }
-        if(Math.random() < 0.15 || floor % 50 === 0) drop();
+        if(Math.random() < 0.2) drop();
         if(floor === maxFloor) maxFloor++;
         floor++; inBattle = false; save(); updateUI();
-        setTimeout(nextBattle, 300);
-    }
-}
-
-function eTurn() {
-    if(!inBattle || !enemy) return;
-    hero.hp -= Math.max(1, enemy.atk - hero.def);
-    updateUI();
-    if(hero.hp <= 0) {
-        addLog(`敗北... ${floor}Fで倒れました。`, "#e74c3c");
-        hero.hp = hero.maxHp; inBattle = false;
-        setTimeout(nextBattle, 1000);
+        setTimeout(nextBattle, 200);
     }
 }
 
 function drop() {
     const isW = Math.random() > 0.5;
-    const l = Math.floor(floor/10) + 1;
-    const i = { id:Date.now(), n:`(Lv.${l}) `+(isW?"戦斧":"重鎧"), type:isW?'w':'a', atk:isW?l*10:0, def:isW?0:l*8 };
+    const l = Math.floor(floor/5) + 1;
+    const i = { id:Date.now(), n:`(Lv.${l}) `+(isW?"英雄の剣":"魔王の鎧"), type:isW?'w':'a', atk:isW?l*12:0, def:isW?0:l*10 };
     inventory.push(i);
-    addLog(`アイテム入手：${i.n}`, "#d4af37");
+    addLog(`入手：${i.n} [${isW?'ATK':'DEF'}+${isW?i.atk:i.def}]`, "#d4af37");
 }
 
-// 超高速オート & たたかう長押し
-const atkBtn = document.getElementById("btnAttack");
-let atkTimer;
-const sA = (e) => { e.preventDefault(); pAtk(); atkTimer = setInterval(pAtk, 100); };
-const eA = () => clearInterval(atkTimer);
-atkBtn.addEventListener("mousedown", sA); atkBtn.addEventListener("mouseup", eA);
-atkBtn.addEventListener("touchstart", sA); atkBtn.addEventListener("touchend", eA);
+setInterval(() => { if(auto && inBattle) pAtk(); }, 100);
+setInterval(() => { if(inBattle) {
+    hero.hp -= Math.max(1, enemy.atk - hero.def);
+    updateUI();
+    if(hero.hp <= 0) { inBattle=false; hero.hp=hero.maxHp; setTimeout(nextBattle, 1000); }
+}}, 1000);
 
-setInterval(() => { if(auto && inBattle) pAtk(); }, 150); // オート150ms
-setInterval(() => { if(inBattle) eTurn(); }, 1000);
+// たたかうボタン
+const btnAtk = document.getElementById("btnAttack");
+btnAtk.addEventListener("touchstart", (e) => { e.preventDefault(); pAtk(); });
+btnAtk.addEventListener("mousedown", pAtk);
 
 function openM(id) {
     document.getElementById(id).style.display = "flex";
     const d = document.getElementById(id==='jobM'?'jobList':id==='skillM'?'sList':'iList');
     if(!d) return; d.innerHTML = "";
-    if(id==='jobM') Object.keys(JOBS).forEach(k => {
-        d.innerHTML += `<div class="list-row"><b>${JOBS[k]}</b><button onclick="changeJob('${k}')">チェンジ</button></div>`;
+    if(id==='jobM') Object.keys(JOB_DATA).concat(["monk","samurai","ninja","archer","assassin","priest","bard","fencer","sage","necromancer","berserker","mechanic","dragoon","alchemist","darknight","guardian"]).forEach(k => {
+        d.innerHTML += `<div class="list-row"><b>${(JOB_DATA[k]||{n:k}).n}</b> <button onclick="changeJob('${k}')">転職</button></div>`;
     });
     if(id==='skillM') {
-        const jn = JOBS[hero.job];
-        document.getElementById("curJobTitle").innerText = jn;
-        for(let i=1; i<=5; i++){
-            const pid = hero.job+"_p"+i; const lv = (skills[hero.job]||{})[pid]||0;
-            d.innerHTML += `<div class="list-row"><div><b>練武 ${i} (Lv.${lv})</b><br><small>永続ステータス強化</small></div>
-                <button onclick="buyS('${pid}')" ${sp<1?'disabled':''}>強化</button></div>`;
-        }
+        const skills_list = (JOB_DATA[hero.job]||{s:["共通技術"]}).s;
+        skills_list.forEach((sn, i) => {
+            const sid = hero.job+"_"+i; const lv = (skills[hero.job]||{})[sid]||0;
+            d.innerHTML += `<div class="list-row"><b>${sn} (Lv.${lv})</b> <button onclick="buyS('${sid}')">強化</button></div>`;
+        });
     }
     if(id==='equipM') inventory.forEach(i => {
         const isEq = hero.eq.w?.id === i.id || hero.eq.a?.id === i.id;
-        d.innerHTML += `<div class="list-row"><div><b>${i.n}</b><br><small>A:${i.atk} D:${i.def}</small></div>
-            <div><button onclick="eqI(${i.id})" ${isEq?'disabled':''}>装備</button><button onclick="sellI(${i.id})">廃棄</button></div></div>`;
+        d.innerHTML += `<div class="list-row"><b>${i.n}</b> [${i.atk?`ATK+${i.atk}`:`DEF+${i.def}`}] <button onclick="eqI(${i.id})" ${isEq?'disabled':''}>装備</button></div>`;
     });
 }
 
-function changeJob(k) { hero.job = k; updateUI(); save(); openM('jobM'); addLog(`${JOBS[k]}に転職した。`); }
-function buyS(id) { if(sp>=1){ sp--; if(!skills[hero.job]) skills[hero.job]={}; skills[hero.job][id] = (skills[hero.job][id]||0)+1; updateUI(); save(); openM('skillM'); } }
+function changeJob(k) { hero.job = k; updateUI(); save(); openM('jobM'); }
+function buyS(id) { if(sp>=1){ sp--; if(!skills[hero.job]) skills[hero.job]={}; skills[hero.job][id]=(skills[hero.job][id]||0)+1; updateUI(); save(); openM('skillM'); } }
 function eqI(id) { const i = inventory.find(x=>x.id===id); hero.eq[i.type]=i; updateUI(); save(); openM('equipM'); }
-function sellI(id) { inventory = inventory.filter(x=>x.id!==id); if(hero.eq.w?.id===id)hero.eq.w=null; if(hero.eq.a?.id===id)hero.eq.a=null; updateUI(); save(); openM('equipM'); }
 function closeM(id) { document.getElementById(id).style.display = "none"; }
-
-function save() { localStorage.setItem(SAVE_KEY, JSON.stringify({ hero, st, skills, inventory, floor, maxFloor, sp, pp, auto })); }
+function save() { localStorage.setItem(SAVE_KEY, JSON.stringify({ hero, st, skills, inventory, floor, maxFloor, sp, pp, auto, autoAllot })); }
 function load() {
     const s = localStorage.getItem(SAVE_KEY);
-    if(s) { const d = JSON.parse(s); hero=d.hero; st=d.st; skills=d.skills; inventory=d.inventory; floor=d.floor; maxFloor=d.maxFloor; sp=d.sp; pp=d.pp; auto=d.auto||false; }
-    hero.hp = hero.maxHp; toggleAuto(); toggleAuto(); // 表示更新用
+    if(s) { const d = JSON.parse(s); hero=d.hero; st=d.st; skills=d.skills; inventory=d.inventory; floor=d.floor; maxFloor=d.maxFloor; sp=d.sp; pp=d.pp; auto=d.auto; autoAllot=d.autoAllot||false; }
+    hero.hp = hero.maxHp;
 }
 load(); updateUI(); nextBattle();
 </script>
