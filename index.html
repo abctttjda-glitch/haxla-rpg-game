@@ -21,21 +21,24 @@ h2{font-size:18px;margin:4px 0;}
   padding:6px;
   margin-bottom:6px;
 }
+.buttons{
+  display:flex;
+  gap:4px;
+}
 button{
-  width:100%;
+  flex:1;
   background:#333;
   color:#eee;
   border:1px solid #555;
   border-radius:6px;
   font-size:18px;
-  padding:10px 0;
-  margin:4px 0;
+  padding:12px 0;
 }
 button:active{background:#666;transform:scale(0.97);}
 .dead{opacity:0.4;}
-.barWrap{background:#333;width:100%;height:10px;border-radius:5px;overflow:hidden;}
+.barWrap{background:#333;height:10px;border-radius:5px;overflow:hidden;}
 .bar{background:#e74c3c;height:100%;}
-.log{font-size:12px;max-height:90px;overflow:hidden;}
+.log{font-size:12px;max-height:80px;overflow:hidden;}
 select{width:100%;font-size:16px;margin:2px 0;}
 </style>
 </head>
@@ -47,8 +50,8 @@ select{width:100%;font-size:16px;margin:2px 0;}
 <div class="panel" id="jobSelect"></div>
 
 <div class="panel">
-距離：<span id="distance">0</span>m<br>
-転生：<span id="rebirth">0</span><br>
+距離：<span id="distance">0</span>m /
+転生：<span id="rebirth">0</span> /
 聖杯Pt：<span id="holy">0</span>
 </div>
 
@@ -61,11 +64,11 @@ select{width:100%;font-size:16px;margin:2px 0;}
 <div class="panel"><strong>パーティ</strong><div id="party"></div></div>
 <div class="panel log" id="log"></div>
 
-<div class="panel">
+<div class="panel buttons">
 <button onclick="stepDungeon()">進む</button>
 <button onclick="toggleAuto()">オート</button>
-<button onclick="changeSpeed()" id="speedBtn">倍速×1</button>
-<button onclick="rebirth()">転生（100m〜）</button>
+<button onclick="changeSpeed()" id="speedBtn">×1</button>
+<button onclick="rebirth()">転生</button>
 </div>
 
 <script>
@@ -80,20 +83,6 @@ const JOBS={
 const ENEMY_NAMES=["スライム","ゴブリン","スケルトン","オーク","魔獣"];
 const BOSS_NAMES=["迷宮の番人","深淵の魔物","古代竜"];
 
-/* ===== 装備 ===== */
-function generateItem(){
- const r=Math.random();
- let rar="N",m=1;
- if(r>0.98){rar="L";m=3;}
- else if(r>0.9){rar="E";m=2;}
- else if(r>0.7){rar="R";m=1.5;}
- return{
-  rarity:rar,
-  atk:Math.floor(3*m),
-  def:Math.floor(2*m)
- };
-}
-
 /* ===== キャラ ===== */
 class Character{
  constructor(job){
@@ -101,18 +90,15 @@ class Character{
   this.job=job;
   this.level=1;this.exp=0;
   this.baseHp=j.hp;this.baseAtk=j.atk;this.baseDef=j.def;
-  this.weapon=null;this.armor=null;
   this.row=j.row;
   this.updateStats();
   this.hp=this.maxHp;
   this.alive=true;
  }
  updateStats(){
-  const w=this.weapon||{atk:0,def:0};
-  const a=this.armor||{atk:0,def:0};
   this.maxHp=this.baseHp;
-  this.atk=this.baseAtk+w.atk+a.atk;
-  this.def=this.baseDef+w.def+a.def;
+  this.atk=this.baseAtk;
+  this.def=this.baseDef;
  }
 }
 
@@ -136,11 +122,13 @@ let speed=1,autoTimer=null,currentEnemy=null;
 let party=[];
 
 /* ===== ログ ===== */
-function addLog(t){log.innerHTML=t+"<br>"+log.innerHTML;}
+function addLog(t){
+ log.innerHTML=t+"<br>"+log.innerHTML;
+}
 
-/* ===== UI 初期職業選択 ===== */
+/* ===== 職業UI ===== */
 function setupJobSelect(){
- jobSelect.innerHTML="<strong>職業選択</strong>";
+ jobSelect.innerHTML="<strong>職業変更</strong>";
  for(let i=0;i<5;i++){
   const s=document.createElement("select");
   for(const j in JOBS){
@@ -151,17 +139,21 @@ function setupJobSelect(){
   jobSelect.appendChild(s);
  }
  const b=document.createElement("button");
- b.textContent="冒険開始";
- b.onclick=startGame;
+ b.textContent="変更確定";
+ b.onclick=applyJobs;
  jobSelect.appendChild(b);
 }
-setupJobSelect();
 
-/* ===== 開始 ===== */
-function startGame(){
+/* ===== 初期パーティ生成 ===== */
+function initParty(){
+ party=Array.from({length:5},()=>new Character("騎士"));
+ updateUI();
+}
+
+/* ===== 職業反映 ===== */
+function applyJobs(){
  party=[...jobSelect.querySelectorAll("select")]
   .map(s=>new Character(s.value));
- jobSelect.style.display="none";
  updateUI();
 }
 
@@ -175,8 +167,7 @@ function levelUp(c){
 
 /* ===== バトル ===== */
 function calcDamage(c,e){
- let atk=c.atk*(c.row==="back"?1.2:1);
- return Math.max(1,Math.floor(atk-e.def));
+ return Math.max(1,Math.floor(c.atk*(c.row==="back"?1.2:1)-e.def));
 }
 function randomAlive(){
  const a=party.filter(c=>c.alive);
@@ -202,12 +193,6 @@ function battle(enemy,end){
      levelUp(c);
     }
    });
-   if(Math.random()<0.25){
-    const item=generateItem();
-    const t=party[Math.floor(Math.random()*party.length)];
-    t.weapon=item;t.updateStats();
-    addLog(`${t.job}が${item.rarity}装備を入手`);
-   }
    reviveParty();end();return;
   }
   const t=randomAlive();
@@ -258,19 +243,17 @@ function toggleAuto(){
 }
 function changeSpeed(){
  speed=speed===1?2:speed===2?4:1;
- speedBtn.textContent=`倍速×${speed}`;
+ speedBtn.textContent="×"+speed;
 }
 
 /* ===== 転生 ===== */
 function rebirth(){
  if(distance<100){addLog("100m未満では転生不可");return;}
  rebirthCount++;
- const g=Math.floor(distance/100);
- holyPoint+=g;
- addLog(`転生！ 聖杯Pt+${g}`);
+ holyPoint+=Math.floor(distance/100);
  distance=0;
- setupJobSelect();
- jobSelect.style.display="block";
+ initParty();
+ addLog("転生した");
 }
 
 /* ===== DOM ===== */
@@ -284,6 +267,10 @@ const enemyText=document.getElementById("enemyText");
 const enemyHpBar=document.getElementById("enemyHpBar");
 const log=document.getElementById("log");
 const speedBtn=document.getElementById("speedBtn");
+
+/* ===== 起動 ===== */
+setupJobSelect();
+initParty();
 </script>
 
 </body>
