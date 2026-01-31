@@ -10,10 +10,10 @@ body{
   background:#111;
   color:#eee;
   font-family:sans-serif;
-  font-size:15px;
+  font-size:17px;
   padding:6px;
 }
-h2{margin:4px 0;font-size:20px}
+h2{margin:4px 0;font-size:22px}
 .panel{
   background:#1a1a1a;
   border:1px solid #444;
@@ -21,29 +21,23 @@ h2{margin:4px 0;font-size:20px}
   padding:6px;
   margin-bottom:6px;
 }
-.buttons{
-  display:flex;
-  gap:4px;
-}
 button{
-  flex:1;
+  width:100%;
   background:#333;
   color:#eee;
   border:1px solid #555;
   border-radius:6px;
-  font-size:18px;
-  padding:12px 0;
+  font-size:20px;
+  padding:10px 0;
+  margin-top:4px;
 }
 button:active{background:#666;}
-.dead{opacity:0.4;}
+.toggleOn{background:#2ecc71;color:#000}
+.dead{opacity:0.4}
+
 .partyRow{
-  display:flex;
-  gap:6px;
-  margin:4px 0;
   font-size:18px;
-}
-.icon{
-  width:18px;height:18px;border-radius:4px;
+  margin:2px 0;
 }
 .barWrap{
   background:#333;
@@ -52,12 +46,13 @@ button:active{background:#666;}
   overflow:hidden;
 }
 .bar{background:#e74c3c;height:100%;}
+
 .log{
-  font-size:13px;
-  max-height:90px;
+  font-size:20px;
+  max-height:110px;
   overflow:hidden;
+  line-height:1.3;
 }
-.toggleOn{background:#2ecc71;}
 </style>
 </head>
 
@@ -66,7 +61,8 @@ button:active{background:#666;}
 <h2>聖杯オートRPG</h2>
 
 <div class="panel">
-撃破数 <span id="kills">0</span>　
+階層 <span id="floor">1</span>　
+撃破 <span id="kills">0</span>　
 聖杯Pt <span id="holy">0</span>
 </div>
 
@@ -83,55 +79,44 @@ button:active{background:#666;}
 </div>
 
 <div class="panel">
-<strong>聖杯強化（恒久）</strong>
-<div class="buttons">
-<button onclick="upgrade('atk')">ATK+</button>
-<button onclick="upgrade('def')">DEF+</button>
-<button onclick="upgrade('hp')">HP+</button>
-<button onclick="upgrade('exp')">EXP+</button>
-</div>
-<button id="autoBtn" onclick="toggleAutoUpgrade()">自動振りOFF</button>
+<strong>聖杯強化</strong>
+<button onclick="upgrade('atk')">ATK +</button>
+<button onclick="upgrade('def')">DEF +</button>
+<button onclick="upgrade('hp')">HP +</button>
+<button onclick="upgrade('exp')">EXP +</button>
+<button id="autoBtn" onclick="toggleAutoUpgrade()">自動振り OFF</button>
 </div>
 
 <div class="panel log" id="log"></div>
 
-<div class="panel buttons">
+<div class="panel">
 <button onclick="stepDungeon()">進む</button>
 <button onclick="toggleAuto()">オート</button>
 </div>
 
 <script>
-/* ===== データ ===== */
+/* ===== 定数 ===== */
+const SPEED = 8;
+const ENEMY_NAMES=["スライム","ゴブリン","オーク","スケルトン"];
 const CHAR_DATA=[
- {name:"レオン",job:"せんし",color:"#3498db"},
- {name:"ミラ",job:"とうぞく",color:"#f1c40f"},
- {name:"アーク",job:"まほうつかい",color:"#9b59b6"},
- {name:"セラ",job:"そうりょ",color:"#2ecc71"}
+ {name:"レオン",job:"せんし"},
+ {name:"ミラ",job:"とうぞく"},
+ {name:"アーク",job:"まほうつかい"},
+ {name:"セラ",job:"そうりょ"}
 ];
 const JOBS={
  せんし:{hp:140,atk:10,def:8},
- とうぞく:{hp:100,atk:9,def:5},
- まほうつかい:{hp:80,atk:14,def:3},
- そうりょ:{hp:90,atk:6,def:4}
+ とうぞく:{hp:110,atk:9,def:5},
+ まほうつかい:{hp:90,atk:14,def:3},
+ そうりょ:{hp:100,atk:6,def:4}
 };
-const ENEMY_NAMES=["スライム","ゴブリン","オーク","スケルトン"];
 
 /* ===== クラス ===== */
-class Enemy{
- constructor(){
-  this.name=ENEMY_NAMES[Math.floor(Math.random()*ENEMY_NAMES.length)];
-  this.maxHp=60;
-  this.hp=this.maxHp;
-  this.atk=8;
-  this.def=3;
- }
-}
 class Character{
  constructor(d,bonus){
   const j=JOBS[d.job];
   this.name=d.name;
   this.job=d.job;
-  this.color=d.color;
   this.level=1;
   this.exp=0;
   this.maxHp=j.hp+bonus.hp;
@@ -141,35 +126,44 @@ class Character{
   this.alive=true;
  }
 }
+class Enemy{
+ constructor(floor){
+  this.name=ENEMY_NAMES[Math.floor(Math.random()*ENEMY_NAMES.length)];
+  this.maxHp=50+floor*10;
+  this.hp=this.maxHp;
+  this.atk=6+floor*2;
+  this.def=2+floor;
+ }
+}
 
 /* ===== 状態 ===== */
+let floor=1;
+let kills=0;
+let holy=0;
+let bonus={atk:0,def:0,hp:0,exp:0};
+let autoUpgrade=false;
 let party=[];
 let enemy=null;
 let autoTimer=null;
-let killCount=0;
-let holyPoint=0;
-let bonus={atk:0,def:0,hp:0,exp:0};
-let autoUpgrade=false;
 
 /* ===== ログ ===== */
 function addLog(t){
  log.innerHTML=t+"<br>"+log.innerHTML;
 }
 
-/* ===== セーブ ===== */
-function save(){
- localStorage.setItem("holyRPG",JSON.stringify({
-  killCount,holyPoint,bonus,autoUpgrade
- }));
-}
-function load(){
- const r=localStorage.getItem("holyRPG");
- if(!r) return;
- const d=JSON.parse(r);
- killCount=d.killCount;
- holyPoint=d.holyPoint;
- bonus=d.bonus;
- autoUpgrade=d.autoUpgrade;
+/* ===== 成長 ===== */
+function expNeed(lv){return 20+lv*10}
+function gainExp(c,val){
+ c.exp+=val*(1+bonus.exp*0.1);
+ while(c.exp>=expNeed(c.level)){
+  c.exp-=expNeed(c.level);
+  c.level++;
+  c.maxHp+=10;
+  c.atk+=2;
+  c.def+=1;
+  c.hp=c.maxHp;
+  addLog(c.name+" LvUP!");
+ }
 }
 
 /* ===== 初期化 ===== */
@@ -187,76 +181,72 @@ function battle(end){
   updateEnemyUI();
   if(enemy.hp<=0){
    clearInterval(it);
-   killCount++;
-   if(killCount%10===0){
-    holyPoint++;
+   kills++;
+   party.forEach(c=>gainExp(c,5));
+   if(kills%10===0){
+    holy++;
     addLog("聖杯Pt +1");
     if(autoUpgrade) autoSpend();
    }
-   party.forEach(c=>{c.alive=true;c.hp=c.maxHp;});
+   floor++;
+   party.forEach(c=>{c.hp=c.maxHp;c.alive=true;});
    end();
    return;
   }
   const t=party.find(c=>c.alive);
   if(!t){
-   party.forEach(c=>{c.alive=true;c.hp=c.maxHp;});
-   addLog("全滅→自動復活");
+   party.forEach(c=>{c.hp=c.maxHp;c.alive=true;});
+   addLog("全滅→復活");
    return;
   }
   t.hp-=Math.max(1,enemy.atk-t.def);
   if(t.hp<=0)t.alive=false;
   updateUI();
- },800/8);
+ },800/SPEED);
 }
 
 /* ===== 操作 ===== */
 function stepDungeon(){
- enemy=new Enemy();
+ enemy=new Enemy(floor);
  updateEnemyUI();
- battle(()=>{
-  save();
-  updateUI();
- });
+ battle(()=>{save();updateUI();});
 }
 function toggleAuto(){
  autoTimer?
  (clearInterval(autoTimer),autoTimer=null):
- (autoTimer=setInterval(stepDungeon,2000/8));
+ (autoTimer=setInterval(stepDungeon,2000/SPEED));
 }
-function upgrade(type){
- if(holyPoint<=0) return;
- holyPoint--;
- bonus[type]+= type==="hp"?10:1;
+function upgrade(t){
+ if(holy<=0) return;
+ holy--;
+ bonus[t]+= t==="hp"?10:1;
  initParty();
- addLog(type.toUpperCase()+" 永久強化");
+ addLog("聖杯強化："+t);
  save();updateUI();
 }
 function autoSpend(){
- const keys=["atk","def","hp","exp"];
- upgrade(keys[Math.floor(Math.random()*keys.length)]);
+ const k=["atk","def","hp","exp"];
+ upgrade(k[Math.floor(Math.random()*4)]);
 }
 function toggleAutoUpgrade(){
  autoUpgrade=!autoUpgrade;
- autoBtn.textContent=autoUpgrade?"自動振りON":"自動振りOFF";
+ autoBtn.textContent=autoUpgrade?"自動振り ON":"自動振り OFF";
  autoBtn.className=autoUpgrade?"toggleOn":"";
  save();
 }
 
 /* ===== UI ===== */
 function updateUI(){
- kills.textContent=killCount;
- holy.textContent=holyPoint;
+ floorEl.textContent=floor;
+ killsEl.textContent=kills;
+ holyEl.textContent=holy;
  partyEl.innerHTML="";
  party.forEach(c=>{
-  const r=document.createElement("div");
-  r.className="partyRow "+(c.alive?"":"dead");
-  const i=document.createElement("div");
-  i.className="icon";i.style.background=c.color;
-  r.appendChild(i);
-  r.appendChild(document.createTextNode(
-   `${c.name}(${c.job}) HP${c.hp}/${c.maxHp} ATK${c.atk} DEF${c.def}`
-  ));
-  partyEl.appendChild(r);
+  const d=document.createElement("div");
+  d.className="partyRow "+(c.alive?"":"dead");
+  d.textContent=
+   `${c.name} Lv${c.level} HP${c.hp}/${c.maxHp} ATK${c.atk} DEF${c.def}`;
+  partyEl.appendChild(d);
  });
 }
 function updateEnemyUI(){
@@ -266,20 +256,34 @@ function updateEnemyUI(){
  enemyHpBar.style.width=(enemy.hp/enemy.maxHp*100)+"%";
 }
 
+/* ===== セーブ ===== */
+function save(){
+ localStorage.setItem("holyRPG",JSON.stringify({
+  floor,kills,holy,bonus,autoUpgrade
+ }));
+}
+function load(){
+ const r=localStorage.getItem("holyRPG");
+ if(!r) return;
+ const d=JSON.parse(r);
+ floor=d.floor;kills=d.kills;holy=d.holy;
+ bonus=d.bonus;autoUpgrade=d.autoUpgrade;
+}
+
 /* ===== DOM ===== */
-const partyEl=document.getElementById("party");
+const partyEl=party=document.getElementById("party");
 const enemyName=document.getElementById("enemyName");
 const enemyText=document.getElementById("enemyText");
 const enemyHpBar=document.getElementById("enemyHpBar");
-const kills=document.getElementById("kills");
-const holy=document.getElementById("holy");
+const floorEl=document.getElementById("floor");
+const killsEl=document.getElementById("kills");
+const holyEl=document.getElementById("holy");
 const log=document.getElementById("log");
 const autoBtn=document.getElementById("autoBtn");
 
 /* ===== 起動 ===== */
 load();
 initParty();
-toggleAutoUpgrade();
 updateUI();
 </script>
 
