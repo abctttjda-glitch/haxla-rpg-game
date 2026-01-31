@@ -73,7 +73,7 @@ h2 {
 <script>
 /* ===== データ ===== */
 class Character {
-  constructor() {
+  constructor() this.weapon = generateWeapon();{
     this.level = 1;
     this.exp = 0;
     this.maxHp = 100;
@@ -82,6 +82,21 @@ class Character {
     this.def = 5;
     this.alive = true;
   }
+}
+
+function generateWeapon(){
+  const r = Math.random();
+  let rarity = "N", mult = 1;
+
+  if(r > 0.98){ rarity="L"; mult=3; }
+  else if(r > 0.90){ rarity="E"; mult=2; }
+  else if(r > 0.70){ rarity="R"; mult=1.5; }
+
+  return {
+    rarity,
+    atk: Math.floor(5 * mult),
+    crit: 0.05 * mult
+  };
 }
 
 class Enemy {
@@ -127,10 +142,20 @@ function addExp(c, val) {
 }
 
 /* ===== バトル ===== */
-function calcDamageWithSkill(c, enemy) {
-  let atk = c.atk;
-  if (c.hp / c.maxHp <= 0.5) atk *= 2; // 覚醒
-  return Math.max(1, atk - enemy.def);
+
+}
+function calcDamageWithSkill(c, enemy){
+  let atk = c.atk + c.weapon.atk;
+
+  if(Math.random() < c.weapon.crit){
+    atk *= 2; // クリティカル
+  }
+
+  if(c.hp / c.maxHp <= 0.5){
+    atk *= 2; // 覚醒
+  }
+
+  return Math.max(1, Math.floor(atk - enemy.def));
 }
 
 function randomAlive() {
