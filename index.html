@@ -81,6 +81,13 @@ class Character {
     this.atk = 10;
     this.def = 5;
     this.alive = true;
+    this.skill = Math.random() < 0.3 ? "連撃" : "強撃";
+    let hits = (c.skill === "連撃" && Math.random() < 0.3) ? 2 : 1;
+
+for(let i=0;i<hits;i++){
+  enemy.hp -= calcDamageWithSkill(c, enemy);
+  if(enemy.hp<=0) break;
+}
   }
 }
 
@@ -100,11 +107,17 @@ function generateWeapon(){
 }
 
 class Enemy {
-  constructor(hp, atk, def) {
-    this.hp = hp;
-    this.maxHp = hp;
-    this.atk = atk;
-    this.def = def;
+  constructor(dist) {
+    let type="雑魚", mult=1;
+
+    if(dist % 100 === 0){ type="ボス"; mult=5; }
+    else if(Math.random() < 0.2){ type="エリート"; mult=2; }
+
+    this.type = type;
+    this.maxHp = Math.floor((50 + dist*0.5) * mult);
+    this.hp = this.maxHp;
+    this.atk = Math.floor((5 + dist*0.05) * mult);
+    this.def = Math.floor(dist*0.02 * mult);
   }
 }
 
