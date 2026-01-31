@@ -143,8 +143,19 @@ let autoUpgrade=false;
 let party=[];
 let enemy=null;
 let autoTimer=null;
-let logQueue=[]; // アニメ用キュー
+let logQueue=[];
 let logTimer=null;
+
+/* ===== DOM ===== */
+const partyEl=document.getElementById("party");
+const enemyName=document.getElementById("enemyName");
+const enemyText=document.getElementById("enemyText");
+const enemyHpBar=document.getElementById("enemyHpBar");
+const floorEl=document.getElementById("floor");
+const killsEl=document.getElementById("kills");
+const holyEl=document.getElementById("holy");
+const log=document.getElementById("log");
+const autoBtn=document.getElementById("autoBtn");
 
 /* ===== ログ ===== */
 function addLog(t){
@@ -175,15 +186,15 @@ function gainExp(c,val){
 
 /* ===== 初期化 ===== */
 function initParty(){
-  if(party.length === 0){
+  if(party.length===0){
     party = CHAR_DATA.map(d=>new Character(d, bonus));
   } else {
     party.forEach(c=>{
-      const j = JOBS[c.job];
+      const j=JOBS[c.job];
       c.maxHp = j.hp + bonus.hp + (c.level-1)*10;
       c.atk = j.atk + bonus.atk + (c.level-1)*2;
-      c.def = j.def + bonus.def + (c.level-1)*1;
-      if(c.hp>c.maxHp) c.hp = c.maxHp; // HP上限調整
+      c.def = j.def + bonus.def + (c.level-1);
+      if(c.hp>c.maxHp)c.hp=c.maxHp;
       c.alive = c.hp>0;
     });
   }
@@ -191,84 +202,53 @@ function initParty(){
 
 /* ===== バトル ===== */
 function battle(end){
-  enemy.hp = enemy.hp>0 ? enemy.hp : enemy.maxHp; // 敵HPリセット
+  enemy.hp = enemy.hp>0?enemy.hp:enemy.maxHp;
   const it = setInterval(()=>{
     // パーティ攻撃
     party.forEach(c=>{
       if(!c.alive) return;
-      const dmg = Math.max(1, c.atk - enemy.def);
-      enemy.hp -= dmg;
+      const dmg=Math.max(1,c.atk-enemy.def);
+      enemy.hp-=dmg;
       if(enemy.hp<0) enemy.hp=0;
-      addLog(`${c.name} は ${enemy.name} に ${dmg} のダメージを与えた！`);
+      addLog(`${c.name} は ${enemy.name} に ${dmg} のダメージ！`);
     });
     updateEnemyUI();
-    
-    if(enemy.hp <= 0){
+
+    if(enemy.hp<=0){
       clearInterval(it);
       kills++;
       party.forEach(c=>gainExp(c,5));
       addLog(`${enemy.name} を倒した！`);
-      if(kills % 10 === 0){
-        holy++;
-        addLog("聖杯Pt +1");
-        if(autoUpgrade) autoSpend();
-      }
+      if(kills%10===0){holy++; addLog("聖杯Pt +1"); if(autoUpgrade) autoSpend();}
       floor++;
-      party.forEach(c=>{if(c.alive)c.hp=c.hp;}); // パーティHP維持
-      end();
       updateUI();
+      end();
       return;
     }
 
     // 敵攻撃
-    const t = party.find(c => c.alive);
+    const t = party.find(c=>c.alive);
     if(!t){
-      party.forEach(c=>{c.hp=c.maxHp; c.alive=true;});
+      party.forEach(c=>{c.hp=c.maxHp;c.alive=true;});
       addLog("全滅→復活");
       updateUI();
       return;
     }
-    const dmg = Math.max(1, enemy.atk - t.def);
-    t.hp -= dmg;
-    if(t.hp<0) t.hp=0;
-    addLog(`${enemy.name} は ${t.name} に ${dmg} のダメージを与えた！`);
-    if(t.hp <= 0){
-      t.alive = false;
-      addLog(`${t.name} は倒れた！`);
-    }
+    const dmg=Math.max(1,enemy.atk-t.def);
+    t.hp-=dmg;
+    if(t.hp<0)t.hp=0;
+    addLog(`${enemy.name} は ${t.name} に ${dmg} のダメージ！`);
+    if(t.hp<=0){t.alive=false; addLog(`${t.name} は倒れた！`);}
     updateUI();
-  }, 800 / SPEED);
+  },800/SPEED);
 }
 
 /* ===== 操作 ===== */
-function stepDungeon(){
- enemy=new Enemy(floor);
- updateEnemyUI();
- battle(()=>{save(); updateUI();});
-}
-function toggleAuto(){
- autoTimer?
- (clearInterval(autoTimer),autoTimer=null):
- (autoTimer=setInterval(stepDungeon,2000/SPEED));
-}
-function upgrade(t){
- if(holy<=0) return;
- holy--;
- bonus[t]+= t==="hp"?10:1;
- initParty();
- addLog("聖杯強化："+t);
- save();updateUI();
-}
-function autoSpend(){
- const k=["atk","def","hp","exp"];
- upgrade(k[Math.floor(Math.random()*4)]);
-}
-function toggleAutoUpgrade(){
- autoUpgrade=!autoUpgrade;
- autoBtn.textContent=autoUpgrade?"自動振り ON":"自動振り OFF";
- autoBtn.className=autoUpgrade?"toggleOn":"";
- save();
-}
+function stepDungeon(){enemy=new Enemy(floor);updateEnemyUI();battle(()=>{save();});}
+function toggleAuto(){autoTimer?(clearInterval(autoTimer),autoTimer=null):(autoTimer=setInterval(stepDungeon,2000/SPEED));}
+function upgrade(t){if(holy<=0)return;holy--;bonus[t]+=t==="hp"?10:1;initParty();addLog("聖杯強化："+t);save();updateUI();}
+function autoSpend(){const k=["atk","def","hp","exp"];upgrade(k[Math.floor(Math.random()*4)]);}
+function toggleAutoUpgrade(){autoUpgrade=!autoUpgrade;autoBtn.textContent=autoUpgrade?"自動振り ON":"自動振り OFF";autoBtn.className=autoUpgrade?"toggleOn":"";save();}
 
 /* ===== UI ===== */
 function updateUI(){
@@ -279,23 +259,23 @@ function updateUI(){
  party.forEach(c=>{
   const d=document.createElement("div");
   d.className="partyRow "+(c.alive?"":"dead");
-  d.textContent=
-   `${c.name} Lv${c.level} HP${c.hp}/${c.maxHp} ATK${c.atk} DEF${c.def}`;
+  d.textContent=`${c.name} Lv${c.level} HP${c.hp}/${c.maxHp} ATK${c.atk} DEF${c.def}`;
   partyEl.appendChild(d);
  });
 }
 function updateEnemyUI(){
- if(!enemy) return;
  enemyName.textContent=enemy.name;
  enemyText.textContent=`HP ${enemy.hp}/${enemy.maxHp}`;
  enemyHpBar.style.width=(enemy.hp/enemy.maxHp*100)+"%";
 }
 
-/* ===== セーブ ===== */
+/* ===== セーブ/ロード ===== */
 function save(){
- localStorage.setItem("holyRPG",JSON.stringify({
-  floor,kills,holy,bonus,autoUpgrade,party
- }));
+ const data = {
+  floor,kills,holy,bonus,autoUpgrade,
+  party:party.map(c=>({name:c.name,job:c.job,level:c.level,exp:c.exp,hp:c.hp,maxHp:c.maxHp,atk:c.atk,def:c.def,alive:c.alive}))
+ };
+ localStorage.setItem("holyRPG",JSON.stringify(data));
 }
 function load(){
  const r=localStorage.getItem("holyRPG");
@@ -304,30 +284,13 @@ function load(){
  floor=d.floor;kills=d.kills;holy=d.holy;
  bonus=d.bonus;autoUpgrade=d.autoUpgrade;
  if(d.party){
-   party = d.party.map(p=>{
-     const c = new Character({name:p.name,job:p.job}, bonus);
-     c.level = p.level;
-     c.exp = p.exp;
-     c.maxHp = p.maxHp;
-     c.atk = p.atk;
-     c.def = p.def;
-     c.hp = p.hp;
-     c.alive = p.alive;
+   party=d.party.map(p=>{
+     const c=new Character({name:p.name,job:p.job},bonus);
+     c.level=p.level;c.exp=p.exp;c.hp=p.hp;c.maxHp=p.maxHp;c.atk=p.atk;c.def=p.def;c.alive=p.alive;
      return c;
    });
  }
 }
-
-/* ===== DOM ===== */
-const partyEl=document.getElementById("party");
-const enemyName=document.getElementById("enemyName");
-const enemyText=document.getElementById("enemyText");
-const enemyHpBar=document.getElementById("enemyHpBar");
-const floorEl=document.getElementById("floor");
-const killsEl=document.getElementById("kills");
-const holyEl=document.getElementById("holy");
-const log=document.getElementById("log");
-const autoBtn=document.getElementById("autoBtn");
 
 /* ===== 起動 ===== */
 load();
