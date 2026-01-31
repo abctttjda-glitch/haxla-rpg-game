@@ -4,25 +4,27 @@
 <meta charset="UTF-8">
 <title>オートRPG</title>
 <style>
-  body {
-    background:#111;
-    color:#eee;
-    font-family:sans-serif;
-    padding:10px;
-  }
-  .panel {
-    background:#1a1a1a;
-    border:1px solid #444;
-    border-radius:6px;
-    padding:8px;
-    margin-bottom:10px;
-  }
-  button {
-    background:#333;
-    color:#eee;
-    border:1px solid #555;
-    padding:6px 12px;
-    margin:2px;
+body {
+  background:#111;
+  color:#eee;
+  font-family:sans-serif;
+  padding:10px;
+  font-size:18px; /* ← 追加（全体） */
+}
+
+button {
+  background:#333;
+  color:#eee;
+  border:1px solid #555;
+  padding:10px 16px;   /* ← 大きく */
+  margin:4px;
+  font-size:20px;      /* ← ボタン文字を大きく */
+  border-radius:8px;
+}
+
+h2 {
+  font-size:26px;
+}
   }
   .dead { color:#777; }
   .bar-bg {
@@ -61,8 +63,9 @@
 <div class="panel">
   <button onclick="stepDungeon()">進む</button>
   <button onclick="toggleAuto()">オート</button>
-  <button onclick="setSpeed(1)">×1</button>
   <button onclick="setSpeed(2)">×2</button>
+  <button onclick="setSpeed(4)">×4</button>
+  <button onclick="setSpeed(8)">×8</button>
   <button onclick="rebirth()">転生</button>
   <button onclick="resetGame()">リセット</button>
 </div>
