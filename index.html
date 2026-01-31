@@ -2,9 +2,9 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>聖杯オートRPG v1.1.0</title>
+<title>聖杯オートRPG v1.2.0</title>
 <style>
-/* 既存のスタイルを継承しつつ追加 */
+/* スタイルは維持しつつ、アイコン用の調整 */
 body{ margin:0; background:#111; color:#eee; font-family:sans-serif; font-size:17px; padding:6px; position: relative; }
 .version { position: absolute; top: 5px; right: 10px; font-size: 12px; color: #666; }
 h2{margin:4px 0;font-size:22px; color:#f1c40f;}
@@ -13,17 +13,17 @@ button{ width:100%; background:#333; color:#eee; border:1px solid #555; border-r
 .toggleOn{background:#2ecc71;color:#000;font-weight:bold;}
 .dead{opacity:0.4; filter: grayscale(100%);}
 .partyRow{ font-size:16px; margin:8px 0; border-bottom: 1px solid #333; padding-bottom: 4px; }
+.char-icon { font-size: 20px; margin-right: 8px; }
 .barWrap{ background:#333; height:10px; border-radius:5px; overflow:hidden; margin-top:4px; }
 .bar{background:#e74c3c;height:100%;transition: width 0.2s;}
-.log{ font-size:16px; height:180px; overflow-y:auto; background: #000; padding: 5px; }
-.crit { color: #f1c40f; font-weight: bold; }
-.skill-text { color: #3498db; font-weight: bold; font-size: 14px; }
-.heal-text { color: #2ecc71; font-weight: bold; }
+.log{ font-size:16px; height:180px; overflow-y:auto; background: #000; padding: 5px; display: flex; flex-direction: column-reverse; }
+.skill-text { color: #3498db; font-weight: bold; }
+.heal-text { color: #2ecc71; }
 </style>
 </head>
 <body>
 
-<div class="version">Version 1.1.0</div>
+<div class="version">Version 1.2.0</div>
 <h2>聖杯オートRPG</h2>
 
 <div class="panel">
@@ -55,84 +55,45 @@ button{ width:100%; background:#333; color:#eee; border:1px solid #555; border-r
 
 <div class="panel" style="display:flex; gap:10px;">
 <button onclick="stepDungeon()" style="flex:1">進む</button>
-<button onclick="toggleAuto()" style="flex:1">オート</button>
+<button id="mainAutoBtn" onclick="toggleAuto()" style="flex:1">オート</button>
 </div>
 
 <script>
 const SPEED = 8;
 
-/* ===== ジョブデータ (スキル10種相当の特性) ===== */
+const CHAR_DATA=[
+ {name:"レオン",job:"せんし", icon:"⚔️"},
+ {name:"ミラ",job:"とうぞく", icon:"🗡️"},
+ {name:"アーク",job:"まほうつかい", icon:"🪄"},
+ {name:"セラ",job:"そうりょ", icon:"🕊️"}
+];
+
 const JOBS = {
- "せんし": {
-    hp:140, atk:12, def:10,
-    passive: "物理耐性 (受けるダメージ-10%)",
-    skills: [
-        { name: "強撃", rate: 0.2, effect: (c, e) => { let d = Math.floor(c.atk * 1.8); e.hp -= d; return `${c.name}の強撃！ ${d}ダメ`; }},
-        { name: "シールドバッシュ", rate: 0.1, effect: (c, e) => { let d = c.def; e.hp -= d; return `${c.name}の盾打！ ${d}ダメ`; }}
-    ]
- },
- "とうぞく": {
-    hp:100, atk:10, def:5,
-    passive: "回避率アップ (15%の確率で無効)",
-    skills: [
-        { name: "急所突き", rate: 0.25, effect: (c, e) => { let d = Math.floor(c.atk * 2.2); e.hp -= d; return `${c.name}の急所突き！ ${d}ダメ`; }},
-        { name: "連続斬り", rate: 0.15, effect: (c, e) => { let d = Math.floor(c.atk * 0.8) * 3; e.hp -= d; return `${c.name}の三連斬！ ${d}ダメ`; }}
-    ]
- },
- "まほうつかい": {
-    hp:80, atk:18, def:3,
-    passive: "魔力増幅 (与えるダメージ+20%)",
-    skills: [
-        { name: "ファイアボール", rate: 0.3, effect: (c, e) => { let d = Math.floor(c.atk * 2.5); e.hp -= d; return `${c.name}の火球！ ${d}ダメ`; }},
-        { name: "メテオ", rate: 0.05, effect: (c, e) => { let d = Math.floor(c.atk * 5); e.hp -= d; return `極大魔法メテオ！ ${d}ダメ`; }}
-    ]
- },
- "そうりょ": {
-    hp:110, atk:8, def:6,
-    passive: "自動回復 (毎ターンHP5回復)",
-    skills: [
-        { name: "ヒール", rate: 0.25, effect: (c, e, p) => { 
-            p.forEach(m => { if(m.alive) m.hp = Math.min(m.maxHp, m.hp + 30); });
-            return `祈りの光！ 全員HP30回復`; 
-        }},
-        { name: "ホーリー", rate: 0.1, effect: (c, e) => { let d = Math.floor(c.atk * 3); e.hp -= d; return `${c.name}の聖光！ ${d}ダメ`; }}
-    ]
- }
+ "せんし": { hp:140, atk:12, def:10, skills: [{ name: "強撃", rate: 0.2, effect: (c, e) => { let d = Math.floor(c.atk * 1.8); e.hp -= d; return `${c.icon}${c.name}の強撃！ ${d}ダメ`; }}] },
+ "とうぞく": { hp:100, atk:10, def:5, skills: [{ name: "急所突き", rate: 0.25, effect: (c, e) => { let d = Math.floor(c.atk * 2.2); e.hp -= d; return `${c.icon}${c.name}の急所突き！ ${d}ダメ`; }}] },
+ "まほうつかい": { hp:80, atk:18, def:3, skills: [{ name: "ファイアボール", rate: 0.3, effect: (c, e) => { let d = Math.floor(c.atk * 2.5); e.hp -= d; return `${c.icon}${c.name}の火球！ ${d}ダメ`; }}] },
+ "そうりょ": { hp:110, atk:8, def:6, skills: [{ name: "ヒール", rate: 0.25, effect: (c, e, p) => { p.forEach(m => { if(m.alive) m.hp = Math.min(m.maxHp, m.hp + 30); }); return `${c.icon}祈りの光！ 全員回復`; }}] }
 };
 
 class Character {
  constructor(d, bonus) {
   const j = JOBS[d.job];
-  this.name = d.name;
-  this.job = d.job;
-  this.level = 1;
-  this.exp = 0;
-  this.maxHp = j.hp + bonus.hp;
-  this.atk = j.atk + bonus.atk;
-  this.def = j.def + bonus.def;
-  this.hp = this.maxHp;
-  this.alive = true;
+  this.name = d.name; this.job = d.job; this.icon = d.icon;
+  this.level = 1; this.exp = 0;
+  this.maxHp = j.hp + bonus.hp; this.atk = j.atk + bonus.atk; this.def = j.def + bonus.def;
+  this.hp = this.maxHp; this.alive = true;
  }
 }
 
-class Enemy {
- constructor(f) {
-  const names = ["スライム", "ゴブリン", "オーク", "ドラゴン"];
-  this.name = names[Math.floor(Math.random()*names.length)];
-  this.maxHp = 50 + f * 15;
-  this.hp = this.maxHp;
-  this.atk = 8 + f * 2;
-  this.def = 3 + f;
- }
-}
-
-let floor=1, kills=0, holy=0, bonus={atk:0,def:0,hp:0,exp:0}, autoUpgrade=false, party=[], enemy=null, autoTimer=null, logQueue=[];
+let floor=1, kills=0, holy=0, bonus={atk:0,def:0,hp:0,exp:0}, autoUpgrade=false, party=[], enemy=null, autoIsOn=false;
 
 function addLog(t, colorClass=""){
- logQueue.push(`<span class="${colorClass}">${t}</span>`);
- if(logQueue.length > 50) logQueue.shift();
  const logBox = document.getElementById("log");
- logBox.innerHTML = logQueue.slice().reverse().join("<br>");
+ const line = document.createElement("div");
+ line.className = colorClass;
+ line.innerHTML = t;
+ logBox.appendChild(line);
+ if(logBox.childNodes.length > 30) logBox.removeChild(logBox.firstChild);
 }
 
 function updateUI(){
@@ -145,7 +106,7 @@ function updateUI(){
     const row = document.createElement("div");
     row.className = "partyRow " + (c.alive ? "" : "dead");
     const hpPer = (c.hp / c.maxHp) * 100;
-    row.innerHTML = `<div>${c.name} [${c.job}] Lv${c.level} HP:${Math.floor(c.hp)}/${c.maxHp}</div>
+    row.innerHTML = `<div><span class="char-icon">${c.icon}</span>${c.name} Lv${c.level} HP:${Math.floor(c.hp)}/${c.maxHp}</div>
                      <div class="barWrap"><div class="bar" style="width:${hpPer}%"></div></div>`;
     pEl.appendChild(row);
  });
@@ -154,89 +115,84 @@ function updateUI(){
 function updateEnemyUI(){
  if(!enemy) return;
  document.getElementById("enemyName").textContent = enemy.name;
- document.getElementById("enemyText").textContent = `HP: ${Math.floor(enemy.hp)}/${enemy.maxHp} ATK:${enemy.atk}`;
+ document.getElementById("enemyText").textContent = `HP: ${Math.floor(enemy.hp)}/${enemy.maxHp}`;
  document.getElementById("enemyHpBar").style.width = (enemy.hp/enemy.maxHp*100) + "%";
 }
 
 function battleLoop(){
  if(!enemy) return;
  const it = setInterval(() => {
-    // プレイヤーのターン
     party.forEach(c => {
-        if(!c.alive || enemy.hp <= 0) return;
-        
-        // パッシブ効果：僧侶の微回復
-        if(c.job === "そうりょ") c.hp = Math.min(c.maxHp, c.hp + 2);
-
-        // スキル判定
+        if(!c.alive || !enemy || enemy.hp <= 0) return;
+        if(c.job === "そうりょ") c.hp = Math.min(c.maxHp, c.hp + 1);
         const jobData = JOBS[c.job];
         let acted = false;
         jobData.skills.forEach(s => {
             if(!acted && Math.random() < s.rate){
-                const res = s.effect(c, enemy, party);
-                addLog(res, "skill-text");
+                addLog(s.effect(c, enemy, party), "skill-text");
                 acted = true;
             }
         });
-
         if(!acted){
             let dmg = Math.max(1, c.atk - enemy.def);
-            if(c.job === "まほうつかい") dmg = Math.floor(dmg * 1.2); // パッシブ
             enemy.hp -= dmg;
             addLog(`${c.name}の攻撃 ${dmg}ダメ`);
         }
     });
 
-    if(enemy.hp <= 0){
+    if(enemy && enemy.hp <= 0){
         clearInterval(it);
         addLog(`--- ${enemy.name}を倒した！ ---`, "heal-text");
         kills++; floor++; 
-        if(kills%5===0) holy++;
+        if(kills%10===0) holy++;
         party.forEach(c => {
-            c.exp += 10 * (1 + bonus.exp * 0.1);
-            if(c.exp >= 20 + c.level*10){ c.level++; c.maxHp+=15; c.hp=c.maxHp; c.atk+=2; addLog(`${c.name} LvUP!`); }
+            c.exp += 10;
+            if(c.exp >= 20 + c.level*10){ c.level++; c.maxHp+=15; c.hp=c.maxHp; c.atk+=2; }
         });
         enemy = null;
         updateUI();
+        if(autoIsOn) setTimeout(stepDungeon, 500 / SPEED); // オート継続
         return;
     }
 
-    // 敵のターン
     const target = party.find(c => c.alive);
     if(!target){
         clearInterval(it);
-        addLog("全滅...");
+        addLog("全滅... 聖杯で復活");
         party.forEach(c => {c.hp=c.maxHp; c.alive=true;});
         enemy = null;
         updateUI();
+        if(autoIsOn) setTimeout(stepDungeon, 1000 / SPEED); // 全滅後もオート継続
         return;
     }
     
-    // 盗賊の回避パッシブ
-    if(target.job === "とうぞく" && Math.random() < 0.15){
-        addLog(`${target.name}は攻撃を回避！`);
-    } else {
-        let eDmg = Math.max(1, enemy.atk - target.def);
-        if(target.job === "せんし") eDmg = Math.floor(eDmg * 0.9); // パッシブ
-        target.hp -= eDmg;
-        addLog(`${enemy.name}の攻撃！ ${target.name}に${eDmg}ダメ`);
-        if(target.hp <= 0){ target.hp=0; target.alive=false; }
-    }
+    let eDmg = Math.max(1, enemy.atk - target.def);
+    target.hp -= eDmg;
+    addLog(`${enemy.name}の攻撃！ ${target.name}に${eDmg}ダメ`);
+    if(target.hp <= 0){ target.hp=0; target.alive=false; }
     
     updateUI();
     updateEnemyUI();
  }, 800 / SPEED);
 }
 
-function stepDungeon(){ if(!enemy){ enemy = new Enemy(floor); updateEnemyUI(); battleLoop(); } }
-function toggleAuto(){ if(autoTimer){ clearInterval(autoTimer); autoTimer=null; } else { autoTimer=setInterval(stepDungeon, 1200/SPEED); } }
-function upgrade(t){ if(holy<=0)return; holy--; bonus[t]+=(t==="hp"?15:2); party.forEach(c=>{ const j=JOBS[c.job]; c.maxHp=j.hp+bonus.hp+(c.level-1)*15; c.atk=j.atk+bonus.atk+(c.level-1)*2; }); updateUI(); }
+function stepDungeon(){ if(!enemy){ 
+    const names = ["💀スケルトン", "👹オーガ", "🐍ヘビ", "🐉ドラゴン"];
+    enemy = { name: names[Math.floor(Math.random()*names.length)], maxHp: 50+floor*15, hp: 50+floor*15, atk: 8+floor*2, def: 3+floor };
+    updateEnemyUI(); battleLoop(); 
+}}
+
+function toggleAuto(){ 
+    autoIsOn = !autoIsOn; 
+    document.getElementById("mainAutoBtn").className = autoIsOn ? "toggleOn" : "";
+    if(autoIsOn) stepDungeon();
+}
+
+function upgrade(t){ if(holy<=0)return; holy--; bonus[t]+=(t==="hp"?15:2); updateUI(); }
 function toggleAutoUpgrade(){ autoUpgrade=!autoUpgrade; document.getElementById("autoBtn").className=autoUpgrade?"toggleOn":""; }
 
-// 初期化
 party = CHAR_DATA.map(d => new Character(d, bonus));
 updateUI();
 </script>
 </body>
 </html>
-
