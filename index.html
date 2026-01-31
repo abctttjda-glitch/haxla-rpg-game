@@ -1,95 +1,5 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<title>オートRPG</title>
-<style>
-body {
-  background:#111;
-  color:#eee;
-  font-family:sans-serif;
-  padding:10px;
-  font-size:30px; /* ← 追加（全体） */
-}
-
-button {
-  background:#333;
-  color:#eee;
-  border:1px solid #555;
-  padding:10px 30px;   /* ← 大きく */
-  margin:4px;
-  font-size:40px;      /* ← ボタン文字を大きく */
-  border-radius:8px;
-}
-
-h2 {
-  font-size:26px;
-}
-  }
-  .dead { color:#777; }
-  .bar-bg {
-    background:#333;
-    width:100%;
-    height:10px;
-  }
-  .bar {
-    background:#c33;
-    height:10px;
-  }
-</style>
-</head>
-<body>
-
-<h2>オートRPG</h2>
-
-<div class="panel">
-  到達距離：<span id="distance">0</span> m<br>
-  転生回数：<span id="rebirth">0</span>
-</div>
-
-<div class="panel">
-  <strong>敵</strong>
-  <div id="enemyText"></div>
-  <div class="bar-bg">
-    <div id="enemyHpBar" class="bar"></div>
-  </div>
-</div>
-
-<div class="panel">
-  <strong>パーティ</strong>
-  <div id="party"></div>
-</div>
-
-<div class="panel">
-  <button onclick="stepDungeon()">進む</button>
-  <button onclick="toggleAuto()">オート</button>
-  <button onclick="setSpeed(2)">×2</button>
-  <button onclick="setSpeed(4)">×4</button>
-  <button onclick="setSpeed(8)">×8</button>
-  <button onclick="rebirth()">転生</button>
-  <button onclick="resetGame()">リセット</button>
-</div>
-
 <script>
-/* ===== データ ===== */
-class Character {
-  constructor() this.weapon = generateWeapon();{
-    this.level = 1;
-    this.exp = 0;
-    this.maxHp = 100;
-    this.hp = this.maxHp;
-    this.atk = 10;
-    this.def = 5;
-    this.alive = true;
-    this.skill = Math.random() < 0.3 ? "連撃" : "強撃";
-    let hits = (c.skill === "連撃" && Math.random() < 0.3) ? 2 : 1;
-
-for(let i=0;i<hits;i++){
-  enemy.hp -= calcDamageWithSkill(c, enemy);
-  if(enemy.hp<=0) break;
-}
-  }
-
+/* ===== 武器 ===== */
 function generateWeapon(){
   const r = Math.random();
   let rarity = "N", mult = 1;
@@ -102,17 +12,31 @@ function generateWeapon(){
     rarity,
     atk: Math.floor(5 * mult),
     crit: 0.05 * mult
+  };
+}
+
+/* ===== キャラ ===== */
+class Character {
+  constructor() {
+    this.level = 1;
+    this.exp = 0;
+    this.maxHp = 100;
+    this.hp = this.maxHp;
+    this.atk = 10;
+    this.def = 5;
+    this.alive = true;
+    this.weapon = generateWeapon();
+    this.skill = Math.random() < 0.3 ? "連撃" : "強撃";
   }
 }
 
+/* ===== 敵 ===== */
 class Enemy {
   constructor(dist) {
-    let type="雑魚", mult=1;
+    let mult = 1;
+    if(dist % 100 === 0) mult = 5;
+    else if(Math.random() < 0.2) mult = 2;
 
-    if(dist % 100 === 0){ type="ボス"; mult=5; }
-    else if(Math.random() < 0.2){ type="エリート"; mult=2; }
-
-    this.type = type;
     this.maxHp = Math.floor((50 + dist*0.5) * mult);
     this.hp = this.maxHp;
     this.atk = Math.floor((5 + dist*0.05) * mult);
@@ -129,192 +53,162 @@ let currentEnemy = null;
 let party = Array.from({ length: 5 }, () => new Character());
 
 /* ===== 成長 ===== */
-function expToNextLevel(lv) {
-  return Math.floor(20 * Math.pow(lv, 1.6));
+function expToNextLevel(lv){
+  return Math.floor(20 * Math.pow(lv,1.6));
 }
-
-function rand(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+function rand(min,max){
+  return Math.floor(Math.random()*(max-min+1))+min;
 }
-
-function levelUp(c) {
+function levelUp(c){
   c.level++;
-  c.maxHp += rand(10, 15);
-  c.atk += rand(2, 4);
-  c.def += rand(1, 2);
+  c.maxHp += rand(10,15);
+  c.atk += rand(2,4);
+  c.def += rand(1,2);
   c.hp = c.maxHp;
 }
-
-function addExp(c, val) {
+function addExp(c,val){
   c.exp += val;
-  while (c.exp >= expToNextLevel(c.level)) {
+  while(c.exp >= expToNextLevel(c.level)){
     c.exp -= expToNextLevel(c.level);
     levelUp(c);
   }
 }
 
 /* ===== バトル ===== */
-
-}
 function calcDamageWithSkill(c, enemy){
   let atk = c.atk + c.weapon.atk;
 
-  if(Math.random() < c.weapon.crit){
-    atk *= 2; // クリティカル
-  }
-
-  if(c.hp / c.maxHp <= 0.5){
-    atk *= 2; // 覚醒
-  }
+  if(Math.random() < c.weapon.crit) atk *= 2;
+  if(c.hp / c.maxHp <= 0.5) atk *= 2;
 
   return Math.max(1, Math.floor(atk - enemy.def));
 }
 
-function randomAlive() {
-  const a = party.filter(c => c.alive);
-  return a[Math.floor(Math.random() * a.length)];
+function randomAlive(){
+  const a = party.filter(c=>c.alive);
+  return a[Math.floor(Math.random()*a.length)];
 }
 
-function reviveParty() {
-  party.forEach(c => {
-    c.alive = true;
-    c.hp = c.maxHp;
+function reviveParty(){
+  party.forEach(c=>{
+    c.alive=true;
+    c.hp=c.maxHp;
   });
 }
 
-function createEnemy(dist) {
-  return new Enemy(
-    Math.floor(50 + dist * 0.5),
-    Math.floor(5 + dist * 0.05),
-    Math.floor(dist * 0.02)
-  );
-}
+function battle(enemy,end){
+  const it=setInterval(()=>{
+    for(const c of party){
+      if(!c.alive) continue;
 
-function battle(enemy, end) {
-  const it = setInterval(() => {
-    for (const c of party) {
-      if (!c.alive) continue;
-      enemy.hp -= calcDamageWithSkill(c, enemy);
-      if (enemy.hp <= 0) break;
+      let hits = (c.skill==="連撃" && Math.random()<0.3) ? 2 : 1;
+      for(let i=0;i<hits;i++){
+        enemy.hp -= calcDamageWithSkill(c, enemy);
+        if(enemy.hp<=0) break;
+      }
+      if(enemy.hp<=0) break;
     }
 
     updateEnemyUI();
 
-    if (enemy.hp <= 0) {
+    if(enemy.hp<=0){
       clearInterval(it);
-      party.forEach(c => c.alive && addExp(c, 10));
+      party.forEach(c=>c.alive && addExp(c,10));
       reviveParty();
       end();
       return;
     }
 
-    const t = randomAlive();
+    const t=randomAlive();
     t.hp -= Math.max(1, enemy.atk - t.def);
-    if (t.hp <= 0) t.alive = false;
+    if(t.hp<=0) t.alive=false;
 
-    if (!party.some(c => c.alive)) {
+    if(!party.some(c=>c.alive)){
       clearInterval(it);
       reviveParty();
       end();
     }
-
     updateUI();
-  }, 800 / speed); // ← 8倍速対応
+  },800/speed);
 }
 
 /* ===== 進行 ===== */
-function stepDungeon() {
+function stepDungeon(){
   distance += 10;
-  currentEnemy = createEnemy(distance);
+  currentEnemy = new Enemy(distance);
   updateEnemyUI();
-  battle(currentEnemy, () => {
+  battle(currentEnemy, ()=>{
     saveGame();
     updateUI();
   });
 }
 
 /* ===== UI ===== */
-function updateUI() {
-  document.getElementById("distance").textContent = distance;
-  document.getElementById("rebirth").textContent = rebirthCount;
-
-  const p = document.getElementById("party");
-  p.innerHTML = "";
-  party.forEach((c, i) => {
-    const d = document.createElement("div");
-    d.className = c.alive ? "" : "dead";
-    d.textContent =
-      `#${i + 1} Lv${c.level} HP ${c.hp}/${c.maxHp} ATK ${c.atk} DEF ${c.def}`;
+function updateUI(){
+  document.getElementById("distance").textContent=distance;
+  document.getElementById("rebirth").textContent=rebirthCount;
+  const p=document.getElementById("party");
+  p.innerHTML="";
+  party.forEach((c,i)=>{
+    const d=document.createElement("div");
+    d.className=c.alive?"":"dead";
+    d.textContent=
+      `#${i+1} Lv${c.level} HP ${c.hp}/${c.maxHp} 武器${c.weapon.rarity}`;
     p.appendChild(d);
   });
 }
 
-function updateEnemyUI() {
-  if (!currentEnemy) return;
-  document.getElementById("enemyText").textContent =
+function updateEnemyUI(){
+  if(!currentEnemy) return;
+  document.getElementById("enemyText").textContent=
     `HP ${currentEnemy.hp}/${currentEnemy.maxHp}`;
-  document.getElementById("enemyHpBar").style.width =
-    (currentEnemy.hp / currentEnemy.maxHp * 100) + "%";
+  document.getElementById("enemyHpBar").style.width=
+    (currentEnemy.hp/currentEnemy.maxHp*100)+"%";
 }
 
 /* ===== 操作 ===== */
-function toggleAuto() {
-  if (autoTimer) {
+function toggleAuto(){
+  if(autoTimer){
     clearInterval(autoTimer);
-    autoTimer = null;
-  } else {
-    autoTimer = setInterval(stepDungeon, 3000 / speed);
+    autoTimer=null;
+  }else{
+    autoTimer=setInterval(stepDungeon,3000/speed);
   }
 }
-
-function setSpeed(v) {
-  speed = v;
-  if (autoTimer) {
+function setSpeed(v){
+  speed=v;
+  if(autoTimer){
     clearInterval(autoTimer);
-    autoTimer = setInterval(stepDungeon, 3000 / speed);
+    autoTimer=setInterval(stepDungeon,3000/speed);
   }
 }
-
-function rebirth() {
+function rebirth(){
   rebirthCount++;
-  distance = 0;
-  party.forEach(c => {
-    c.level = 1;
-    c.exp = 0;
-    c.maxHp = 100 + rebirthCount * 20;
-    c.atk = 10 + rebirthCount * 5;
-    c.def = 5 + rebirthCount * 3;
-    c.hp = c.maxHp;
-    c.alive = true;
-  });
-  saveGame();
+  distance=0;
+  party=Array.from({length:5},()=>new Character());
   updateUI();
 }
-
-function resetGame() {
+function resetGame(){
   localStorage.removeItem("autoRPG_save");
   location.reload();
 }
 
 /* ===== セーブ ===== */
-function saveGame() {
+function saveGame(){
   localStorage.setItem("autoRPG_save",
-    JSON.stringify({ distance, rebirthCount, party })
+    JSON.stringify({distance,rebirthCount,party})
   );
 }
-
-function loadGame() {
-  const r = localStorage.getItem("autoRPG_save");
-  if (!r) return;
-  const d = JSON.parse(r);
-  distance = d.distance;
-  rebirthCount = d.rebirthCount;
-  d.party.forEach((c, i) => Object.assign(party[i], c));
+function loadGame(){
+  const r=localStorage.getItem("autoRPG_save");
+  if(!r) return;
+  const d=JSON.parse(r);
+  distance=d.distance;
+  rebirthCount=d.rebirthCount;
+  party=d.party.map(p=>Object.assign(new Character(),p));
 }
 
 /* ===== 起動 ===== */
 loadGame();
 updateUI();
 </script>
-
-  
