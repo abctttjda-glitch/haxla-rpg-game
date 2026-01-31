@@ -2,33 +2,31 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>Job Master Tower v4.7.0</title>
+<title>Job Master Tower v4.9.1 [Fix & Polish]</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <style>
 :root { --bg: #050505; --panel: #111; --accent: #d4af37; --text: #ccc; --border: #333; }
 * { touch-action: manipulation; box-sizing: border-box; -webkit-user-select: none; }
 body { margin:0; background:var(--bg); color:var(--text); font-family: 'Consolas', monospace; height: 100dvh; display:flex; flex-direction:column; padding:8px; overflow:hidden; }
 button { background:#222; color:#eee; border:1px solid #444; border-radius:4px; cursor:pointer; padding:8px; font-size:11px; }
-button:active { background: #444; }
-.active-toggle { background: #b38f00 !important; color: #000 !important; font-weight: bold; }
-.auto-on { background: #006400 !important; border-color: #0f0 !important; }
 
-/* ステータスパネル */
-.hero-status-panel { background:var(--panel); border:1px solid var(--accent); padding:10px; border-radius:4px; margin-bottom:6px; display:grid; grid-template-columns: 1fr 1.5fr; gap:10px; position: relative; }
+/* 押したらわかるボタンの色変化 */
+.auto-on-green { background: #008000 !important; color: #fff !important; border: 1px solid #0f0 !important; font-weight: bold; box-shadow: 0 0 5px #0f0; }
+.active-battle-on { background: #b38f00 !important; color: #000 !important; font-weight: bold; }
+
+.hero-status-panel { background:var(--panel); border:1px solid var(--accent); padding:10px; border-radius:4px; margin-bottom:6px; display:grid; grid-template-columns: 1fr 1.5fr; gap:10px; }
 .exp-bar { width: 100%; background: #222; height: 5px; margin-top: 4px; overflow: hidden; }
 .exp-fill { background: #3498db; height: 100%; width: 0%; transition: width 0.3s; }
 
-.enemy-box { text-align: center; padding: 10px; border: 1px solid var(--border); background: #000; margin-bottom: 6px; }
+.enemy-box { text-align: center; padding: 10px; border: 1px solid var(--border); background: #000; margin-bottom: 6px; min-height: 80px; }
 .hp-bar { width: 100%; background:#200; height:12px; border:1px solid #400; margin-top:4px; overflow: hidden; }
-.hp-fill { background:linear-gradient(90deg, #900, #f00); height:100%; width:100%; transition: width 0.1s; }
+.hp-fill { background:linear-gradient(90deg, #900, #f00); height:100%; width:100%; }
 
 .log-area { flex: 1; background:#000; border:1px solid var(--border); overflow-y:auto; padding:8px; font-size:11px; line-height:1.3; display:flex; flex-direction:column-reverse; margin-bottom:6px; }
-
 .battle-actions { display: flex; gap: 4px; margin-bottom: 8px; }
 #btnAttack { flex: 2; height: 45px; background: #400; font-weight: bold; border: 1px solid #822; }
 
 .btn-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
-
 .modal { display: none; position: fixed; inset:0; background:rgba(0,0,0,0.98); z-index:100; justify-content:center; align-items:center; }
 .modal-content { background:#111; border:1px solid #333; width:95%; height:92%; padding:15px; overflow-y:auto; }
 .st-row { background: #1a1a1a; padding: 10px; border-radius: 4px; margin-bottom: 8px; border: 1px solid #333; }
@@ -40,11 +38,8 @@ button:active { background: #444; }
 <div class="hero-status-panel">
     <div>
         <small id="jobLabel" style="color:var(--accent); font-weight:bold;">---</small><br>
-        <b style="font-size:16px;">Lv.<span id="hLv">1</span></b><br>
-        <div style="font-size:9px; color:#888;">
-            次まで: <span id="nextExp">0</span><br>
-            <div class="exp-bar"><div id="expFill" class="exp-fill"></div></div>
-        </div>
+        <b style="font-size:16px;">Lv.<span id="hLv">1</span></b>
+        <div class="exp-bar"><div id="expFill" class="exp-fill"></div></div>
     </div>
     <div style="font-size:11px;">
         HP : <b id="hHp">0/0</b><br>
@@ -55,18 +50,18 @@ button:active { background: #444; }
 
 <div class="enemy-box">
     <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px;">
-        <span onclick="changeFloor(-1)">◀戻る</span>
-        <b id="eName">---</b>
-        <span onclick="changeFloor(1)">進む▶</span>
+        <button onclick="changeFloor(-1)">◀戻る</button>
+        <b id="eName">敵を索敵中...</b>
+        <button onclick="changeFloor(1)">進む▶</button>
     </div>
     <div class="hp-bar"><div id="eHpFill" class="hp-fill"></div></div>
-    <div id="eHpNum" style="font-size:10px;">0 / 0</div>
+    <div id="eHpNum" style="font-size:10px; margin-top:2px;">0 / 0</div>
 </div>
 
 <div class="log-area" id="log"></div>
 
 <div class="battle-actions">
-    <button id="btnAttack">攻撃</button>
+    <button id="btnAttack" onclick="pAtk()">攻撃</button>
     <button id="btnAuto" onclick="toggleAuto()">自動戦闘: OFF</button>
 </div>
 
@@ -79,144 +74,116 @@ button:active { background: #444; }
 
 <div id="statM" class="modal"><div class="modal-content">
     <h3>📊 ステータス強化</h3>
-    <p style="font-size:10px; color:var(--accent);">自動ボタンをONにするとLvアップ時に優先的に振ります</p>
-    
     <div class="st-row">
-        <div style="display:flex; justify-content:space-between;"><b>攻撃力</b> <button id="auto_atk" onclick="toggleAutoTarget('atk')">自動:OFF</button></div>
-        <div style="margin-top:5px;"><button onclick="modST('atk',1)">+1</button><button onclick="modST('atk',10)">+10</button><button onclick="modST('atk',100)">+100</button><button onclick="modST('atk',1000)">+1k</button></div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <b>攻撃力</b> 
+            <button id="auto_atk" onclick="toggleAutoTarget('atk')">自動振り:OFF</button>
+        </div>
+        <div style="margin-top:5px;"><button onclick="modST('atk',1)">+1</button><button onclick="modST('atk',10)">+10</button><button onclick="modST('atk',100)">+100</button></div>
     </div>
     <div class="st-row">
-        <div style="display:flex; justify-content:space-between;"><b>防御力</b> <button id="auto_def" onclick="toggleAutoTarget('def')">自動:OFF</button></div>
-        <div style="margin-top:5px;"><button onclick="modST('def',1)">+1</button><button onclick="modST('def',10)">+10</button><button onclick="modST('def',100)">+100</button><button onclick="modST('def',1000)">+1k</button></div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <b>防御力</b> 
+            <button id="auto_def" onclick="toggleAutoTarget('def')">自動振り:OFF</button>
+        </div>
+        <div style="margin-top:5px;"><button onclick="modST('def',1)">+1</button><button onclick="modST('def',10)">+10</button><button onclick="modST('def',100)">+100</button></div>
     </div>
     <div class="st-row">
-        <div style="display:flex; justify-content:space-between;"><b>最大HP</b> <button id="auto_hp" onclick="toggleAutoTarget('hp')">自動:OFF</button></div>
-        <div style="margin-top:5px;"><button onclick="modST('hp',1)">+1</button><button onclick="modST('hp',10)">+10</button><button onclick="modST('hp',100)">+100</button><button onclick="modST('hp',1000)">+1k</button></div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <b>最大HP</b> 
+            <button id="auto_hp" onclick="toggleAutoTarget('hp')">自動振り:OFF</button>
+        </div>
+        <div style="margin-top:5px;"><button onclick="modST('hp',1)">+1</button><button onclick="modST('hp',10)">+10</button><button onclick="modST('hp',100)">+100</button></div>
     </div>
-
-    <button onclick="resetPP()" style="color:#e74c3c; width:100%; padding:5px;">PPをリセットして全回収</button><br><br>
-    <button onclick="closeM('statM')" style="width:100%">閉じる</button>
+    <button onclick="resetPP()" style="color:#ff4d4d; width:100%; border-color:#500; margin-bottom:10px;">PPを全回収(振り直し)</button>
+    <button onclick="closeM('statM')" style="width:100%; height:40px;">閉じる</button>
 </div></div>
 
 <div id="jobM" class="modal"><div class="modal-content"><h3>🛡️ ジョブチェンジ</h3><div id="jobList"></div><br><button onclick="closeM('jobM')">戻る</button></div></div>
-<div id="skillM" class="modal"><div class="modal-content"><h3>🎓 <span id="curJobTitle"></span> 固有スキル</h3><div id="sList"></div><br><button onclick="closeM('skillM')">戻る</button></div></div>
+<div id="skillM" class="modal"><div class="modal-content"><h3>🎓 <span id="curJobTitle"></span> スキル</h3><div id="sList"></div><br><button onclick="closeM('skillM')">戻る</button></div></div>
 <div id="equipM" class="modal"><div class="modal-content"><h3>📦 アイテム</h3><div id="iList"></div><br><button onclick="closeM('equipM')">戻る</button></div></div>
 
 <script>
-const SAVE_KEY = "Slayer_v4.7.0";
+const SAVE_KEY = "JOB_MASTER_ULTIMATE_SAVE";
 let floor=1, maxFloor=1, sp=0, pp=0, autoBattle=false;
 let autoTargets = { atk:false, def:false, hp:false };
 let st = { hp:20, atk:10, def:10 }; 
 let hero = { lv:1, exp:0, job:'warrior', hp:200, eq:{w:null, a:null} };
 let inventory = [], skills = {};
+let enemy = null;
 
-// 20ジョブ × 10スキル
 const JOB_INFO = {
-    warrior: { n:"戦士", s:["なぎ払い","盾受け","奮起","捨て身","鋼の肉体","兜割り","雄叫び","連撃","不屈の闘志","究極斬"] },
-    mage: { n:"魔術師", s:["火球","魔力貯め","氷結","魔術障壁","二重詠唱","雷鳴","知恵の泉","吸魔","時空歪曲","禁呪"] },
-    thief: { n:"盗賊", s:["目潰し","素早い身のこなし","盗みの極意","奇襲","隠れ身","罠設置","毒手","鍵開け","金運","神速"] },
-    cleric: { n:"聖職者", s:["回復","浄化","防護の祈り","聖なる光","祝福","献身","奇跡","救済","加護","天罰"] },
-    samurai: { n:"侍", s:["居合","黙想","峰打ち","燕返し","心眼","見切り","鬼気","不動心","一刀両断","散り際"] },
-    ninja: { n:"忍者", s:["手裏剣","身代わり","影分身","火遁","土遁","水遁","変わり身","暗殺","空蝉","奥義伝承"] },
-    monk: { n:"拳闘士", s:["正拳突き","気合","鉄拳","練気","連打","無呼吸","内功","金剛拳","波動","百烈拳"] },
-    ranger: { n:"狩人", s:["狙い撃ち","仕掛け罠","鷹の目","連射","カモフラージュ","野伏","毒矢","多重矢","獣使い","必殺矢"] },
-    knight: { n:"騎士", s:["騎士道","突撃","鉄壁","挑発","名誉","陣形","聖域","重圧","不退転","王の守護"] },
-    berserker: { n:"狂戦士", s:["狂乱","出血","肉斬骨断","破壊","強奪","執念","憤怒","激震","死地","最終決戦"] },
-    dragoon: { n:"竜騎士", s:["跳躍","槍投げ","竜の息吹","竜鱗","高空","旋風","貫通","屠竜","竜魂","飛翔斬"] },
-    necromancer: { n:"死霊使い", s:["腐敗","骸骨召喚","死者の呪い","生気吸収","骨の壁","遺体爆破","亡霊の加護","冥府","蘇生","魂の選別"] },
-    bard: { n:"吟遊詩人", s:["勇気の歌","守りの調べ","癒やしの音","惑わしの旋律","反響","調律","鎮魂歌","即興曲","英雄譚","終曲"] },
-    alchemist: { n:"錬金術師", s:["投薬","爆発","合成","変換","硬化薬","増幅液","賢者の石","黄金化","触媒","創造"] },
-    assassin: { n:"暗殺者", s:["急所突き","毒煙","処刑","不意打ち","影走り","無力化","隠密","致命傷","静寂","終焉"] },
-    paladin: { n:"聖騎士", s:["聖域","守護","裁き","献身","聖剣","降臨","天啓","破邪","不滅","栄光"] },
-    sage: { n:"賢者", s:["解析","賢知","魔力循環","全魔法","瞑想","理の探求","禁書","聖域","万象","真理"] },
-    darkknight: { n:"暗黒騎士", s:["闇の剣","生気略奪","虚脱","絶望","影の衣","背徳","奈落","呪怨","深淵","混沌"] },
-    dancer: { n:"踊り子", s:["情熱のステップ","扇の舞","誘惑","軽業","激励","剣舞","魅了","鼓舞","祝福の舞","絶頂"] },
-    summoner: { n:"召喚師", s:["精霊召喚","魔獣呼び","契約","命令","共鳴","転送","使役","守護獣","融合","万獣王"] }
+    warrior: { n:"戦士", s:[{n:"なぎ払い", d:"ATK特化", w:[5,1,10]}, {n:"盾受け", d:"DEF特化", w:[1,5,20]}, {n:"奮起", d:"均等強化", w:[3,3,30]}, {n:"捨て身", d:"攻撃極振り", w:[8,0,5]}, {n:"鋼の肉体", d:"HP大幅増", w:[1,2,100]}, {n:"兜割り", d:"攻撃強化", w:[6,1,10]}, {n:"雄叫び", d:"攻/HP強化", w:[4,1,40]}, {n:"連撃", d:"攻撃強化", w:[5,2,10]}, {n:"不屈の闘志", d:"防/HP強化", w:[2,4,60]}, {n:"究極斬", d:"攻撃極限", w:[10,1,10]}] },
+    mage: { n:"魔術師", s:[{n:"火球", d:"攻撃強化", w:[6,1,5]}, {n:"魔力貯め", d:"攻撃強化", w:[5,1,10]}, {n:"氷結", d:"防御強化", w:[2,5,15]}, {n:"魔術障壁", d:"防御強化", w:[1,6,20]}, {n:"二重詠唱", d:"攻撃強化", w:[7,1,5]}, {n:"雷鳴", d:"攻撃強化", w:[8,1,5]}, {n:"知恵の泉", d:"防/HP強化", w:[2,3,50]}, {n:"吸魔", d:"HP強化", w:[3,2,60]}, {n:"時空歪曲", d:"防御強化", w:[1,8,10]}, {n:"禁呪", d:"攻撃特化", w:[12,0,5]}] }
 };
+
+function save() { localStorage.setItem(SAVE_KEY, JSON.stringify({ hero, st, skills, inventory, floor, maxFloor, sp, pp, autoTargets })); }
+
+function load() {
+    const saved = localStorage.getItem(SAVE_KEY);
+    if (saved) {
+        const d = JSON.parse(saved);
+        hero = {...hero, ...d.hero};
+        st = {...st, ...d.st};
+        skills = d.skills || {};
+        inventory = d.inventory || [];
+        floor = d.floor || 1;
+        maxFloor = d.maxFloor || 1;
+        sp = d.sp || 0;
+        pp = d.pp || 0;
+        autoTargets = d.autoTargets || { atk:false, def:false, hp:false };
+    }
+}
 
 function updateUI() {
     let sA=0, sD=0, sH=0;
-    Object.keys(skills).forEach(j => {
-        Object.keys(skills[j]).forEach(sid => {
-            const lv = skills[j][sid];
-            sA += lv*3; sD += lv*2; sH += lv*50;
+    Object.keys(skills).forEach(jKey => {
+        const info = JOB_INFO[jKey]; if(!info) return;
+        Object.keys(skills[jKey]).forEach(sIdx => {
+            const lv = skills[jKey][sIdx]; const w = info.s[sIdx].w;
+            sA += lv * w[0]; sD += lv * w[1]; sH += lv * w[2];
         });
     });
-    
     let eA = hero.eq.w ? hero.eq.w.atk : 0;
     let eD = hero.eq.a ? hero.eq.a.def : 0;
-
-    const oldMaxHp = hero.maxHp || 1;
     hero.maxHp = (st.hp * 10) + sH;
-    
-    // HPバグ修正：最大HPの変化に合わせて現在HPを調整
     if(hero.hp === undefined || hero.hp > hero.maxHp) hero.hp = hero.maxHp;
-
     hero.atk = st.atk + sA + eA;
     hero.def = st.def + sD + eD;
     
-    const nextVal = hero.lv * 50;
     document.getElementById("hLv").innerText = hero.lv;
     document.getElementById("hHp").innerText = `${Math.floor(hero.hp)}/${hero.maxHp}`;
     document.getElementById("hAtk").innerText = hero.atk;
     document.getElementById("hDef").innerText = hero.def;
     document.getElementById("hPp").innerText = pp;
     document.getElementById("hSp").innerText = sp;
-    document.getElementById("nextExp").innerText = nextVal - hero.exp;
-    document.getElementById("expFill").style.width = (hero.exp / nextVal * 100) + "%";
-    document.getElementById("jobLabel").innerText = (JOB_INFO[hero.job]||{n:hero.job}).n;
-    document.getElementById("mPp").innerText = pp;
-    
-    // 自動設定ボタンの見た目更新
-    ["atk","def","hp"].forEach(type => {
-        const btn = document.getElementById("auto_"+type);
-        if(btn) {
-            btn.className = autoTargets[type] ? "auto-on" : "";
-            btn.innerText = autoTargets[type] ? "自動:ON" : "自動:OFF";
+    const nxt = hero.lv * 50;
+    document.getElementById("expFill").style.width = (hero.exp / nxt * 100) + "%";
+    document.getElementById("jobLabel").innerText = JOB_INFO[hero.job]?.n || "冒険者";
+
+    // 自動ステ振りボタンの色変更
+    ["atk","def","hp"].forEach(t => {
+        const b = document.getElementById("auto_"+t);
+        if(b){
+            if(autoTargets[t]) { b.classList.add("auto-on-green"); b.innerText = "自動振り:ON"; }
+            else { b.classList.remove("auto-on-green"); b.innerText = "自動振り:OFF"; }
         }
     });
+    
+    // 自動戦闘ボタンの色変更
+    const ab = document.getElementById("btnAuto");
+    if(autoBattle) { ab.classList.add("active-battle-on"); ab.innerText = "自動戦闘: ON"; }
+    else { ab.classList.remove("active-battle-on"); ab.innerText = "自動戦闘: OFF"; }
 }
 
-function modST(k, v) {
-    let amt = Math.min(v, pp);
-    if(amt > 0) { st[k] += amt; pp -= amt; }
-    updateUI(); save();
-}
+function modST(k, v) { let a = Math.min(v, pp); if(a > 0){ st[k] += a; pp -= a; } updateUI(); save(); }
+function resetPP() { pp += (st.hp - 20) + (st.atk - 10) + (st.def - 10); st = { hp:20, atk:10, def:10 }; updateUI(); save(); }
+function toggleAutoTarget(type) { autoTargets[type] = !autoTargets[type]; updateUI(); save(); }
+function toggleAuto() { autoBattle = !autoBattle; updateUI(); }
 
-function resetPP() {
-    pp += (st.hp - 20) + (st.atk - 10) + (st.def - 10);
-    st = { hp:20, atk:10, def:10 };
-    updateUI(); save();
-}
-
-function toggleAutoTarget(type) {
-    autoTargets[type] = !autoTargets[type];
-    updateUI();
-}
-
-function toggleAuto() {
-    autoBattle = !autoBattle;
-    const btn = document.getElementById("btnAuto");
-    btn.className = autoBattle ? "active-toggle" : "";
-    btn.innerText = autoBattle ? "自動戦闘: ON" : "自動戦闘: OFF";
-}
-
-function addLog(msg, col="") {
-    const l = document.getElementById("log");
-    const d = document.createElement("div"); if(col) d.style.color = col;
-    d.innerText = `> ${msg}`; l.prepend(d);
-    if(l.childNodes.length > 25) l.removeChild(l.lastChild);
-}
-
-function changeFloor(v) {
-    let n = floor + v;
-    if(n >= 1 && n <= maxFloor) { floor = n; nextBattle(); }
-}
-
-let enemy = null;
 function nextBattle() {
     const isB = (floor % 50 === 0);
-    const m = Math.pow(1.05, floor-1) * (isB ? 4 : 1);
+    const m = Math.pow(1.04, floor-1) * (isB ? 3.5 : 1);
     enemy = {
         name: (isB?"【BOSS】":"") + floor + "階の魔物",
         hp: Math.floor((100 + floor*20) * m),
@@ -234,22 +201,18 @@ function updateE() {
 }
 
 function pAtk() {
-    if(!enemy) return;
+    if(!enemy) { nextBattle(); return; }
     enemy.hp -= Math.max(1, hero.atk - enemy.atk*0.05);
     updateE();
     if(enemy.hp <= 0) {
         const xp = 20 + floor;
-        addLog(`${enemy.name}撃破！ ${xp}経験値獲得`, "#2ecc71");
+        addLog(`${enemy.name}を討伐。 ${xp}EXP獲得`, "#2ecc71");
         hero.exp += xp;
         if(hero.exp >= hero.lv * 50) {
             hero.lv++; hero.exp=0; pp += 5; sp += 1;
-            addLog(`レベルアップ！ PP+5 SP+1獲得`, "#3498db");
-            // 自動ステ振り実行
-            let targets = Object.keys(autoTargets).filter(k => autoTargets[k]);
-            if(targets.length > 0) {
-                let per = Math.floor(pp / targets.length);
-                targets.forEach(t => { st[t] += per; pp -= per; });
-            }
+            addLog(`レベルアップ！ PP+5 SP+1`, "#3498db");
+            let ts = Object.keys(autoTargets).filter(k => autoTargets[k]);
+            if(ts.length > 0) { let p = Math.floor(pp / ts.length); ts.forEach(t => { st[t] += p; pp -= p; }); }
         }
         if(Math.random() < 0.2 || floor % 50 === 0) drop();
         if(floor === maxFloor) maxFloor++;
@@ -260,57 +223,53 @@ function pAtk() {
 function drop() {
     const isW = Math.random() > 0.5;
     const l = Math.floor(floor/5) + 1;
-    const adjs = ["鋭い", "重厚な", "鉄壁の", "古びた", "光る", "魔力の"];
-    const adj = adjs[Math.floor(Math.random()*adjs.length)];
-    const i = { 
-        id:Date.now(), n:`[${adj}] `+(isW?"英雄の剣":"守護の鎧")+`+${l}`, 
-        type:isW?'w':'a', atk:isW?l*15:0, def:isW?0:l*12 
-    };
+    const i = { id:Date.now(), n:`[レア] `+(isW?"武器":"防具")+`+${l}`, type:isW?'w':'a', atk:isW?l*20:0, def:isW?0:l*15 };
     inventory.push(i);
-    addLog(`拾：${i.n}`, "#d4af37");
+    addLog(`入手：${i.n}`, "#d4af37");
 }
 
-// 攻撃・ターン処理
+function addLog(msg, col="") {
+    const l = document.getElementById("log");
+    const d = document.createElement("div"); if(col) d.style.color = col;
+    d.innerText = `> ${msg}`; l.prepend(d);
+    if(l.childNodes.length > 20) l.removeChild(l.lastChild);
+}
+
 setInterval(() => { if(autoBattle) pAtk(); }, 120);
 setInterval(() => { if(enemy) {
     hero.hp -= Math.max(1, enemy.atk - hero.def);
     updateUI();
-    if(hero.hp <= 0) { hero.hp=hero.maxHp; floor = Math.max(1, floor-1); nextBattle(); addLog("敗北...1つ下の階へ退避。","#e74c3c"); }
+    if(hero.hp <= 0) { hero.hp = hero.maxHp; floor = Math.max(1, floor-1); nextBattle(); addLog("敗退...階層を下げる。","#e74c3c"); }
 }}, 1000);
 
-document.getElementById("btnAttack").onclick = pAtk;
-
+function changeFloor(v) { let n = floor + v; if(n >= 1 && n <= maxFloor){ floor = n; nextBattle(); } }
 function openM(id) {
     document.getElementById(id).style.display = "flex";
     const d = document.getElementById(id==='jobM'?'jobList':id==='skillM'?'sList':'iList');
     if(!d) return; d.innerHTML = "";
     if(id==='jobM') Object.keys(JOB_INFO).forEach(k => {
-        d.innerHTML += `<div class="list-row"><b>${JOB_INFO[k].n}</b> <button onclick="changeJob('${k}')" ${hero.job===k?'disabled':''}>選択</button></div>`;
+        d.innerHTML += `<div class="list-row"><b>${JOB_INFO[k].n}</b> <button onclick="changeJob('${k}')" ${hero.job===k?'disabled':''}>転職</button></div>`;
     });
     if(id==='skillM') {
-        const j = JOB_INFO[hero.job]; document.getElementById("curJobTitle").innerText = j.n;
-        j.s.forEach((sn, i) => {
-            const sid = hero.job+"_"+i; const lv = (skills[hero.job]||{})[sid]||0;
-            d.innerHTML += `<div class="list-row"><div><b>${sn} (Lv.${lv})</b><br><small>全能力微増</small></div> <button onclick="buyS('${sid}')">強化</button></div>`;
+        const j = JOB_INFO[hero.job]; if(!j) return;
+        document.getElementById("curJobTitle").innerText = j.n;
+        j.s.forEach((sObj, i) => {
+            const lv = (skills[hero.job]||{})[i]||0;
+            d.innerHTML += `<div class="list-row"><div><b>${sObj.n} (Lv.${lv})</b><br><small style="color:#888;">${sObj.d}</small></div> <button onclick="buyS(${i})">強化</button></div>`;
         });
     }
     if(id==='equipM') inventory.forEach(i => {
         const isEq = hero.eq.w?.id === i.id || hero.eq.a?.id === i.id;
-        d.innerHTML += `<div class="list-row"><div><b>${i.n}</b><br><small>${i.atk?`攻撃+${i.atk}`:`防御+${i.def}`}</small></div> <button onclick="eqI(${i.id})" ${isEq?'disabled':''}>装備</button></div>`;
+        d.innerHTML += `<div class="list-row"><div><b>${i.n}</b><br><small>${i.atk?`攻+${i.atk}`:`防+${i.def}`}</small></div> <button onclick="eqI(${i.id})" ${isEq?'disabled':''}>装備</button></div>`;
     });
 }
-
-function changeJob(k) { hero.job = k; updateUI(); save(); openM('jobM'); addLog(`${JOB_INFO[k].n}に転職！`); }
-function buyS(id) { if(sp>=1){ sp--; if(!skills[hero.job]) skills[hero.job]={}; skills[hero.job][id]=(skills[hero.job][id]||0)+1; updateUI(); save(); openM('skillM'); } }
+function changeJob(k) { hero.job = k; updateUI(); save(); openM('jobM'); }
+function buyS(idx) { if(sp>=1){ sp--; if(!skills[hero.job]) skills[hero.job]={}; skills[hero.job][idx]=(skills[hero.job][idx]||0)+1; updateUI(); save(); openM('skillM'); } }
 function eqI(id) { const i = inventory.find(x=>x.id===id); hero.eq[i.type]=i; updateUI(); save(); openM('equipM'); }
 function closeM(id) { document.getElementById(id).style.display = "none"; }
-function save() { localStorage.setItem(SAVE_KEY, JSON.stringify({ hero, st, skills, inventory, floor, maxFloor, sp, pp, autoTargets })); }
-function load() {
-    const s = localStorage.getItem(SAVE_KEY);
-    if(s) { const d = JSON.parse(s); hero=d.hero; st=d.st; skills=d.skills; inventory=d.inventory; floor=d.floor; maxFloor=d.maxFloor; sp=d.sp; pp=d.pp; autoTargets=d.autoTargets||autoTargets; }
-    hero.hp = hero.maxHp;
-}
-load(); updateUI(); nextBattle();
+
+// 起動処理
+window.onload = () => { load(); updateUI(); nextBattle(); };
 </script>
 </body>
 </html>
