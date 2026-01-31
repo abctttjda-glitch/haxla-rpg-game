@@ -2,78 +2,37 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>聖杯オートRPG - 改良版</title>
+<title>聖杯オートRPG v1.1.0</title>
 <style>
-body{
-  margin:0;
-  background:#111;
-  color:#eee;
-  font-family:sans-serif;
-  font-size:17px;
-  padding:6px;
-}
+/* 既存のスタイルを継承しつつ追加 */
+body{ margin:0; background:#111; color:#eee; font-family:sans-serif; font-size:17px; padding:6px; position: relative; }
+.version { position: absolute; top: 5px; right: 10px; font-size: 12px; color: #666; }
 h2{margin:4px 0;font-size:22px; color:#f1c40f;}
-.panel{
-  background:#1a1a1a;
-  border:1px solid #444;
-  border-radius:6px;
-  padding:8px;
-  margin-bottom:8px;
-}
-button{
-  width:100%;
-  background:#333;
-  color:#eee;
-  border:1px solid #555;
-  border-radius:6px;
-  font-size:20px;
-  padding:10px 0;
-  margin-top:4px;
-  cursor: pointer;
-}
-button:active{background:#666;}
+.panel{ background:#1a1a1a; border:1px solid #444; border-radius:6px; padding:8px; margin-bottom:8px; }
+button{ width:100%; background:#333; color:#eee; border:1px solid #555; border-radius:6px; font-size:20px; padding:10px 0; margin-top:4px; cursor: pointer; }
 .toggleOn{background:#2ecc71;color:#000;font-weight:bold;}
 .dead{opacity:0.4; filter: grayscale(100%);}
-
-.partyRow{
-  font-size:16px;
-  margin:8px 0;
-}
-.barWrap{
-  background:#333;
-  height:12px;
-  border-radius:6px;
-  overflow:hidden;
-  margin-top:4px;
-}
+.partyRow{ font-size:16px; margin:8px 0; border-bottom: 1px solid #333; padding-bottom: 4px; }
+.barWrap{ background:#333; height:10px; border-radius:5px; overflow:hidden; margin-top:4px; }
 .bar{background:#e74c3c;height:100%;transition: width 0.2s;}
-.hp-text{font-size: 14px; color: #ccc;}
-
-.log{
-  font-size:18px;
-  height:150px;
-  overflow-y:auto;
-  line-height:1.4;
-  border-left: 4px solid #444;
-  background: #000;
-}
-.crit { color: #f1c40f; font-weight: bold; } /* クリティカル用の色 */
-.heal { color: #2ecc71; }
+.log{ font-size:16px; height:180px; overflow-y:auto; background: #000; padding: 5px; }
+.crit { color: #f1c40f; font-weight: bold; }
+.skill-text { color: #3498db; font-weight: bold; font-size: 14px; }
+.heal-text { color: #2ecc71; font-weight: bold; }
 </style>
 </head>
 <body>
 
+<div class="version">Version 1.1.0</div>
 <h2>聖杯オートRPG</h2>
 
 <div class="panel">
-階層 <span id="floor">1</span>　
-撃破 <span id="kills">0</span>　
-聖杯Pt <span id="holy">0</span>
+階層 <span id="floor">1</span>　撃破 <span id="kills">0</span>　聖杯Pt <span id="holy">0</span>
 </div>
 
 <div class="panel">
 <strong>敵: <span id="enemyName"></span></strong>
-<div id="enemyText" class="hp-text"></div>
+<div id="enemyText" style="font-size:14px"></div>
 <div class="barWrap"><div id="enemyHpBar" class="bar"></div></div>
 </div>
 
@@ -83,12 +42,11 @@ button:active{background:#666;}
 </div>
 
 <div class="panel">
-<strong>聖杯強化</strong>
 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;">
-    <button onclick="upgrade('atk')">ATK +</button>
-    <button onclick="upgrade('def')">DEF +</button>
-    <button onclick="upgrade('hp')">HP +</button>
-    <button onclick="upgrade('exp')">EXP +</button>
+    <button onclick="upgrade('atk')">ATK+</button>
+    <button onclick="upgrade('def')">DEF+</button>
+    <button onclick="upgrade('hp')">HP+</button>
+    <button onclick="upgrade('exp')">EXP+</button>
 </div>
 <button id="autoBtn" onclick="toggleAutoUpgrade()">自動振り OFF</button>
 </div>
@@ -101,290 +59,182 @@ button:active{background:#666;}
 </div>
 
 <script>
-/* ===== 定数・設定 ===== */
 const SPEED = 8;
-const ENEMY_NAMES=["スライム","ゴブリン","オーク","スケルトン","デーモン","ドラゴン"];
-const CHAR_DATA=[
- {name:"レオン",job:"せんし"},
- {name:"ミラ",job:"とうぞく"},
- {name:"アーク",job:"まほうつかい"},
- {name:"セラ",job:"そうりょ"}
-];
-const JOBS={
- せんし:{hp:140,atk:10,def:8},
- とうぞく:{hp:110,atk:9,def:5},
- まほうつかい:{hp:90,atk:14,def:3},
- そうりょ:{hp:100,atk:6,def:4}
+
+/* ===== ジョブデータ (スキル10種相当の特性) ===== */
+const JOBS = {
+ "せんし": {
+    hp:140, atk:12, def:10,
+    passive: "物理耐性 (受けるダメージ-10%)",
+    skills: [
+        { name: "強撃", rate: 0.2, effect: (c, e) => { let d = Math.floor(c.atk * 1.8); e.hp -= d; return `${c.name}の強撃！ ${d}ダメ`; }},
+        { name: "シールドバッシュ", rate: 0.1, effect: (c, e) => { let d = c.def; e.hp -= d; return `${c.name}の盾打！ ${d}ダメ`; }}
+    ]
+ },
+ "とうぞく": {
+    hp:100, atk:10, def:5,
+    passive: "回避率アップ (15%の確率で無効)",
+    skills: [
+        { name: "急所突き", rate: 0.25, effect: (c, e) => { let d = Math.floor(c.atk * 2.2); e.hp -= d; return `${c.name}の急所突き！ ${d}ダメ`; }},
+        { name: "連続斬り", rate: 0.15, effect: (c, e) => { let d = Math.floor(c.atk * 0.8) * 3; e.hp -= d; return `${c.name}の三連斬！ ${d}ダメ`; }}
+    ]
+ },
+ "まほうつかい": {
+    hp:80, atk:18, def:3,
+    passive: "魔力増幅 (与えるダメージ+20%)",
+    skills: [
+        { name: "ファイアボール", rate: 0.3, effect: (c, e) => { let d = Math.floor(c.atk * 2.5); e.hp -= d; return `${c.name}の火球！ ${d}ダメ`; }},
+        { name: "メテオ", rate: 0.05, effect: (c, e) => { let d = Math.floor(c.atk * 5); e.hp -= d; return `極大魔法メテオ！ ${d}ダメ`; }}
+    ]
+ },
+ "そうりょ": {
+    hp:110, atk:8, def:6,
+    passive: "自動回復 (毎ターンHP5回復)",
+    skills: [
+        { name: "ヒール", rate: 0.25, effect: (c, e, p) => { 
+            p.forEach(m => { if(m.alive) m.hp = Math.min(m.maxHp, m.hp + 30); });
+            return `祈りの光！ 全員HP30回復`; 
+        }},
+        { name: "ホーリー", rate: 0.1, effect: (c, e) => { let d = Math.floor(c.atk * 3); e.hp -= d; return `${c.name}の聖光！ ${d}ダメ`; }}
+    ]
+ }
 };
 
-/* ===== クラス ===== */
-class Character{
- constructor(d, bonus = {hp:0, atk:0, def:0}){
-  const j=JOBS[d.job] || JOBS["せんし"];
-  this.name=d.name;
-  this.job=d.job;
-  this.level=1;
-  this.exp=0;
-  this.maxHp=j.hp+bonus.hp;
-  this.atk=j.atk+bonus.atk;
-  this.def=j.def+bonus.def;
-  this.hp=this.maxHp;
-  this.alive=true;
+class Character {
+ constructor(d, bonus) {
+  const j = JOBS[d.job];
+  this.name = d.name;
+  this.job = d.job;
+  this.level = 1;
+  this.exp = 0;
+  this.maxHp = j.hp + bonus.hp;
+  this.atk = j.atk + bonus.atk;
+  this.def = j.def + bonus.def;
+  this.hp = this.maxHp;
+  this.alive = true;
  }
 }
 
-class Enemy{
- constructor(floor){
-  this.name=ENEMY_NAMES[Math.floor(Math.random()*ENEMY_NAMES.length)];
-  this.maxHp=Math.floor(50 + floor * 12);
-  this.hp=this.maxHp;
-  this.atk=Math.floor(6 + floor * 1.5);
-  this.def=Math.floor(2 + floor * 0.8);
+class Enemy {
+ constructor(f) {
+  const names = ["スライム", "ゴブリン", "オーク", "ドラゴン"];
+  this.name = names[Math.floor(Math.random()*names.length)];
+  this.maxHp = 50 + f * 15;
+  this.hp = this.maxHp;
+  this.atk = 8 + f * 2;
+  this.def = 3 + f;
  }
 }
 
-/* ===== 状態 ===== */
-let floor=1;
-let kills=0;
-let holy=0;
-let bonus={atk:0,def:0,hp:0,exp:0};
-let autoUpgrade=false;
-let party=[];
-let enemy=null;
-let autoTimer=null;
-let logQueue=[];
-let logTimer=null;
+let floor=1, kills=0, holy=0, bonus={atk:0,def:0,hp:0,exp:0}, autoUpgrade=false, party=[], enemy=null, autoTimer=null, logQueue=[];
 
-/* ===== DOM ===== */
-const logEl=document.getElementById("log");
-
-/* ===== ログ（最新を上に、色付き対応） ===== */
-function addLog(t, isCrit = false){
- let msg = isCrit ? `<span class="crit">${t}</span>` : t;
- logQueue.push(msg);
- if(!logTimer) runLogQueue();
-}
-function runLogQueue(){
- if(logQueue.length===0){ logTimer=null; return; }
- const line = logQueue.shift();
- logEl.innerHTML = line + "<br>" + logEl.innerHTML;
- if(logEl.childNodes.length > 50) logEl.removeChild(logEl.lastChild); // 負荷対策
- logTimer = setTimeout(runLogQueue, 300 / (SPEED/2));
+function addLog(t, colorClass=""){
+ logQueue.push(`<span class="${colorClass}">${t}</span>`);
+ if(logQueue.length > 50) logQueue.shift();
+ const logBox = document.getElementById("log");
+ logBox.innerHTML = logQueue.slice().reverse().join("<br>");
 }
 
-/* ===== 成長・計算 ===== */
-function expNeed(lv){return 20+lv*10}
-function gainExp(c,val){
- c.exp += val * (1 + (bonus.exp || 0) * 0.1);
- while(c.exp >= expNeed(c.level)){
-  c.exp -= expNeed(c.level);
-  c.level++;
-  c.maxHp += 10;
-  c.atk += 2;
-  c.def += 1;
-  addLog(`【${c.name}】が Lv${c.level} に上がった！`);
- }
-}
-
-/* ===== 初期化 ===== */
-function initParty(){
-  if(party.length===0){
-    party = CHAR_DATA.map(d=>new Character(d, bonus));
-  } else {
-    party.forEach(c=>{
-      const j=JOBS[c.job];
-      // NaNを避けるために || 0 を付与
-      c.maxHp = (j.hp || 0) + (bonus.hp || 0) + (c.level-1)*10;
-      c.atk = (j.atk || 0) + (bonus.atk || 0) + (c.level-1)*2;
-      c.def = (j.def || 0) + (bonus.def || 0) + (c.level-1);
-      if(c.hp > c.maxHp || isNaN(c.hp)) c.hp = c.maxHp;
-      c.alive = c.hp > 0;
-    });
-  }
-}
-
-/* ===== バトルロジック ===== */
-function battle(endCallback){
- if(!enemy) enemy = new Enemy(floor);
- 
- const it=setInterval(()=>{
-   // 1. パーティの攻撃
-   party.forEach(c=>{
-     if(!c.alive || enemy.hp <= 0) return;
-     
-     // クリティカル判定
-     const isCrit = Math.random() < 0.1;
-     let dmg = Math.max(1, c.atk - enemy.def);
-     if(isCrit) dmg = Math.floor(dmg * 1.5);
-     
-     // ダメージのゆらぎ(±10%)
-     dmg = Math.floor(dmg * (0.9 + Math.random() * 0.2));
-     
-     enemy.hp -= dmg;
-     addLog(`${c.name}の攻撃：${dmg}ダメージ！`, isCrit);
-   });
-
-   if(enemy.hp <= 0){
-     enemy.hp = 0;
-     updateEnemyUI();
-     clearInterval(it);
-     kills++;
-     party.forEach(c=>gainExp(c, 5));
-     addLog(`--- ${enemy.name}を撃破！ ---`);
-     if(kills%10===0){
-       holy++; 
-       addLog("聖杯Ptを1獲得した！"); 
-       if(autoUpgrade) autoSpend();
-     }
-     floor++;
-     updateUI();
-     save();
-     setTimeout(endCallback, 500 / SPEED);
-     return;
-   }
-
-   // 2. 敵の攻撃（生きているメンバーからランダムに狙う）
-   const targets = party.filter(c=>c.alive);
-   if(targets.length === 0){
-     clearInterval(it);
-     addLog("パーティが全滅した...");
-     setTimeout(()=>{
-         party.forEach(c=>{c.hp=c.maxHp; c.alive=true;});
-         addLog("聖杯の力で復活した！");
-         updateUI();
-         if(endCallback) endCallback();
-     }, 1000);
-     return;
-   }
-   
-   const t = targets[Math.floor(Math.random() * targets.length)];
-   let eDmg = Math.max(1, enemy.atk - t.def);
-   eDmg = Math.floor(eDmg * (0.9 + Math.random() * 0.2));
-   t.hp -= eDmg;
-   if(t.hp <= 0) { t.hp = 0; t.alive = false; addLog(`${t.name}が倒れた！`); }
-   else { addLog(`${enemy.name}の攻撃：${t.name}に${eDmg}ダメージ`); }
-
-   updateUI();
-   updateEnemyUI();
- }, 800 / SPEED);
-}
-
-/* ===== 操作系 ===== */
-function stepDungeon(){
-    if(autoTimer && !enemy) return; // 重複防止
-    enemy = new Enemy(floor);
-    updateEnemyUI();
-    battle(()=>{
-        enemy = null;
-        if(!autoTimer) updateUI();
-    });
-}
-
-function toggleAuto(){
-    if(autoTimer){
-        clearInterval(autoTimer);
-        autoTimer = null;
-        addLog("オート探索を停止しました");
-    } else {
-        autoTimer = setInterval(()=>{
-            if(!enemy) stepDungeon();
-        }, 1000 / SPEED);
-        addLog("オート探索を開始しました");
-    }
-}
-
-function upgrade(t){
-    if(holy <= 0) return;
-    holy--;
-    bonus[t] += (t === "hp" ? 10 : 1);
-    initParty();
-    addLog(`聖杯強化：${t.toUpperCase()} がアップ！`);
-    save();
-    updateUI();
-}
-
-function autoSpend(){
-    const k=["atk","def","hp","exp"];
-    upgrade(k[Math.floor(Math.random()*4)]);
-}
-
-function toggleAutoUpgrade(){
-    autoUpgrade = !autoUpgrade;
-    const btn = document.getElementById("autoBtn");
-    btn.textContent = autoUpgrade ? "自動振り ON" : "自動振り OFF";
-    btn.className = autoUpgrade ? "toggleOn" : "";
-    save();
-}
-
-/* ===== UI更新 ===== */
 function updateUI(){
  document.getElementById("floor").textContent = floor;
  document.getElementById("kills").textContent = kills;
  document.getElementById("holy").textContent = holy;
- 
- const partyEl = document.getElementById("party");
- partyEl.innerHTML = "";
- party.forEach(c=>{
-   const d = document.createElement("div");
-   d.className = "partyRow " + (c.alive ? "" : "dead");
-   const hpPer = Math.max(0, (c.hp / c.maxHp) * 100);
-   d.innerHTML = `
-     <div style="display:flex; justify-content:space-between">
-        <span>${c.name} Lv${c.level}</span>
-        <span class="hp-text">HP ${Math.floor(c.hp)}/${c.maxHp}</span>
-     </div>
-     <div class="barWrap"><div class="bar" style="width:${hpPer}%; background:${hpPer<30?'#f1c40f':'#e74c3c'}"></div></div>
-     <div style="font-size:12px; color:#aaa">ATK ${c.atk} / DEF ${c.def}</div>
-   `;
-   partyEl.appendChild(d);
+ const pEl = document.getElementById("party");
+ pEl.innerHTML = "";
+ party.forEach(c => {
+    const row = document.createElement("div");
+    row.className = "partyRow " + (c.alive ? "" : "dead");
+    const hpPer = (c.hp / c.maxHp) * 100;
+    row.innerHTML = `<div>${c.name} [${c.job}] Lv${c.level} HP:${Math.floor(c.hp)}/${c.maxHp}</div>
+                     <div class="barWrap"><div class="bar" style="width:${hpPer}%"></div></div>`;
+    pEl.appendChild(row);
  });
 }
 
 function updateEnemyUI(){
  if(!enemy) return;
  document.getElementById("enemyName").textContent = enemy.name;
- document.getElementById("enemyText").textContent = `HP ${Math.floor(enemy.hp)} / ${enemy.maxHp}`;
- const eHpPer = Math.max(0, (enemy.hp / enemy.maxHp) * 100);
- document.getElementById("enemyHpBar").style.width = eHpPer + "%";
+ document.getElementById("enemyText").textContent = `HP: ${Math.floor(enemy.hp)}/${enemy.maxHp} ATK:${enemy.atk}`;
+ document.getElementById("enemyHpBar").style.width = (enemy.hp/enemy.maxHp*100) + "%";
 }
 
-/* ===== セーブ・ロード ===== */
-function save(){
- const data={
-   floor, kills, holy, bonus, autoUpgrade,
-   party: party.map(c=>({
-     name:c.name, job:c.job, level:c.level, exp:c.exp, hp:c.hp
-   }))
- };
- localStorage.setItem("holyRPG_v2", JSON.stringify(data));
+function battleLoop(){
+ if(!enemy) return;
+ const it = setInterval(() => {
+    // プレイヤーのターン
+    party.forEach(c => {
+        if(!c.alive || enemy.hp <= 0) return;
+        
+        // パッシブ効果：僧侶の微回復
+        if(c.job === "そうりょ") c.hp = Math.min(c.maxHp, c.hp + 2);
+
+        // スキル判定
+        const jobData = JOBS[c.job];
+        let acted = false;
+        jobData.skills.forEach(s => {
+            if(!acted && Math.random() < s.rate){
+                const res = s.effect(c, enemy, party);
+                addLog(res, "skill-text");
+                acted = true;
+            }
+        });
+
+        if(!acted){
+            let dmg = Math.max(1, c.atk - enemy.def);
+            if(c.job === "まほうつかい") dmg = Math.floor(dmg * 1.2); // パッシブ
+            enemy.hp -= dmg;
+            addLog(`${c.name}の攻撃 ${dmg}ダメ`);
+        }
+    });
+
+    if(enemy.hp <= 0){
+        clearInterval(it);
+        addLog(`--- ${enemy.name}を倒した！ ---`, "heal-text");
+        kills++; floor++; 
+        if(kills%5===0) holy++;
+        party.forEach(c => {
+            c.exp += 10 * (1 + bonus.exp * 0.1);
+            if(c.exp >= 20 + c.level*10){ c.level++; c.maxHp+=15; c.hp=c.maxHp; c.atk+=2; addLog(`${c.name} LvUP!`); }
+        });
+        enemy = null;
+        updateUI();
+        return;
+    }
+
+    // 敵のターン
+    const target = party.find(c => c.alive);
+    if(!target){
+        clearInterval(it);
+        addLog("全滅...");
+        party.forEach(c => {c.hp=c.maxHp; c.alive=true;});
+        enemy = null;
+        updateUI();
+        return;
+    }
+    
+    // 盗賊の回避パッシブ
+    if(target.job === "とうぞく" && Math.random() < 0.15){
+        addLog(`${target.name}は攻撃を回避！`);
+    } else {
+        let eDmg = Math.max(1, enemy.atk - target.def);
+        if(target.job === "せんし") eDmg = Math.floor(eDmg * 0.9); // パッシブ
+        target.hp -= eDmg;
+        addLog(`${enemy.name}の攻撃！ ${target.name}に${eDmg}ダメ`);
+        if(target.hp <= 0){ target.hp=0; target.alive=false; }
+    }
+    
+    updateUI();
+    updateEnemyUI();
+ }, 800 / SPEED);
 }
 
-function load(){
- const r = localStorage.getItem("holyRPG_v2");
- if(!r) return;
- try {
-     const d = JSON.parse(r);
-     floor = d.floor || 1;
-     kills = d.kills || 0;
-     holy = d.holy || 0;
-     bonus = d.bonus || {atk:0, def:0, hp:0, exp:0};
-     autoUpgrade = d.autoUpgrade || false;
-     if(d.party){
-       party = d.party.map(p=>{
-         const c = new Character(p, bonus);
-         c.level = p.level || 1;
-         c.exp = p.exp || 0;
-         c.hp = p.hp;
-         return c;
-       });
-     }
-     if(autoUpgrade) toggleAutoUpgrade(); // UI状態の復元
- } catch(e) { console.error("Load Error", e); }
-}
+function stepDungeon(){ if(!enemy){ enemy = new Enemy(floor); updateEnemyUI(); battleLoop(); } }
+function toggleAuto(){ if(autoTimer){ clearInterval(autoTimer); autoTimer=null; } else { autoTimer=setInterval(stepDungeon, 1200/SPEED); } }
+function upgrade(t){ if(holy<=0)return; holy--; bonus[t]+=(t==="hp"?15:2); party.forEach(c=>{ const j=JOBS[c.job]; c.maxHp=j.hp+bonus.hp+(c.level-1)*15; c.atk=j.atk+bonus.atk+(c.level-1)*2; }); updateUI(); }
+function toggleAutoUpgrade(){ autoUpgrade=!autoUpgrade; document.getElementById("autoBtn").className=autoUpgrade?"toggleOn":""; }
 
-/* ===== 実行 ===== */
-load();
-initParty();
+// 初期化
+party = CHAR_DATA.map(d => new Character(d, bonus));
 updateUI();
 </script>
 </body>
