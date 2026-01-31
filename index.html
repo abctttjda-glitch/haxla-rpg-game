@@ -2,264 +2,266 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>聖杯RPG：ダンジョン・ハンター v3.4.0</title>
+<title>聖杯RPG：孤高の勇者 v3.5.0</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <style>
-:root { --main-bg: #0d0d0d; --panel-bg: #1a1a1a; --accent: #f1c40f; --text: #eee; --border: #333; }
+:root { --main-bg: #0d0d0d; --panel-bg: #1a1a1a; --accent: #f1c40f; --text: #eee; --border: #333; --danger: #e74c3c; }
 * { touch-action: manipulation; box-sizing: border-box; -webkit-user-select: none; }
-body { margin:0; background:var(--main-bg); color:var(--text); font-family:sans-serif; font-size:12px; height: 100dvh; display:flex; flex-direction:column; padding:6px; overflow:hidden; }
-button { background:#333; color:#eee; border:1px solid #555; border-radius:4px; cursor:pointer; padding:6px; }
+body { margin:0; background:var(--main-bg); color:var(--text); font-family:monospace; font-size:14px; height: 100dvh; display:flex; flex-direction:column; padding:8px; overflow:hidden; }
+button { background:#333; color:#eee; border:1px solid #555; border-radius:4px; cursor:pointer; padding:8px; font-weight:bold; }
 button:active { background: #555; }
-.toggleOn { background:#27ae60 !important; }
+.toggleOn { background:#27ae60 !important; border-color:#2ecc71 !important; }
 
-/* レイアウト：ステータス重視 */
-.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; background:var(--panel-bg); padding:6px; border-radius:6px; border:1px solid var(--border); }
-.main-grid { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; overflow-y: auto; align-content: start; }
-.char-card { background:var(--panel-bg); border:1px solid var(--border); padding:8px; border-radius:8px; }
-.char-name { font-weight:bold; color:var(--accent); font-size:11px; margin-bottom:2px; display:flex; justify-content:space-between; }
-.equip-text { font-size:9px; color:#aaa; margin-top:2px; }
+/* ヘッダー */
+.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 
-/* 敵・進行エリア */
-.battle-panel { background:#222; border:1px solid #c0392b; padding:6px; border-radius:6px; margin-bottom:6px; }
-.progress-bar { background:#111; height:4px; border-radius:2px; margin-top:4px; }
-.progress-fill { background:var(--accent); height:100%; width:0%; transition:0.3s; }
+/* キャラクターメイン表示（ここを大きく改善） */
+.hero-panel { flex: 1; background:var(--panel-bg); border:2px solid var(--border); border-radius:12px; padding:15px; display:flex; flex-direction:column; align-items:center; gap:10px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+.hero-icon { font-size: 48px; margin-bottom: 5px; }
+.hero-name { font-size: 20px; font-weight: bold; color: var(--accent); }
+.hero-stats { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.stat-box { background: rgba(0,0,0,0.3); padding: 8px; border-radius: 6px; text-align: center; border: 1px solid #444; }
+.stat-val { font-size: 18px; color: #fff; display: block; }
+.hp-container { width: 100%; margin-top: 5px; }
+.hp-bar { background:#222; height:14px; border-radius:7px; overflow:hidden; border:1px solid #555; position:relative; }
+.hp-fill { background:linear-gradient(90deg, #e74c3c, #ff7675); height:100%; width:100%; transition: width 0.2s; }
 
-/* ログ・通知 */
-.log-area { height: 60px; background:#000; border:1px solid var(--border); border-radius:6px; margin: 4px 0; padding:4px; overflow-y:auto; font-size:10px; color:#888; display:flex; flex-direction:column-reverse; }
+/* 敵・進行 */
+.battle-info { background:#222; border-left: 4px solid var(--danger); padding:8px; border-radius:4px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; }
 
-.footer { display: grid; grid-template-columns: 1fr 2.5fr; gap: 6px; height: 46px; }
+/* ログ */
+.log-area { height: 70px; background:#000; border:1px solid var(--border); border-radius:6px; margin: 8px 0; padding:5px; overflow-y:auto; font-size:11px; color:#aaa; display:flex; flex-direction:column-reverse; }
+
+/* フッター */
+.footer { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; height: 50px; }
 
 /* モーダル */
 .modal { display: none; position: fixed; inset:0; background:rgba(0,0,0,0.9); z-index:100; justify-content:center; align-items:center; }
-.modal-content { background:#222; border:1px solid #444; border-radius:10px; width:90%; max-width:300px; padding:15px; }
-.dungeon-list { display: grid; gap: 8px; margin-top: 10px; }
-.dungeon-btn { padding:12px; text-align:left; display:flex; justify-content:space-between; }
+.modal-content { background:#222; border:1px solid #444; border-radius:12px; width:90%; max-width:320px; padding:20px; }
 </style>
 </head>
 <body>
 
 <div class="header">
-    <div><strong>聖杯Pt: <span id="holy">0</span></strong></div>
-    <div style="display:flex; gap:4px;">
+    <div><small>聖杯Pt:</small> <strong id="holy" style="color:var(--accent); font-size:18px;">0</strong></div>
+    <div style="display:flex; gap:6px;">
         <button onclick="openModal('upgradeModal')">✨強化</button>
         <button onclick="openModal('gachaModal')">🎁ガチャ</button>
     </div>
 </div>
 
-<div class="battle-panel">
-    <div style="display:flex; justify-content:space-between; font-size:11px;">
-        <span id="targetName">待機中...</span>
-        <span id="battleStep">0 / 10</span>
-    </div>
-    <div class="progress-bar"><div id="pFill" class="progress-fill"></div></div>
+<div class="battle-info">
+    <div><span id="targetName" style="color:var(--danger); font-weight:bold;">待機中</span></div>
+    <div style="font-size:12px;">Progress: <span id="battleStep">0/10</span></div>
 </div>
 
-<div class="main-grid" id="partyList"></div>
+<div class="hero-panel">
+    <div class="hero-icon">🛡️</div>
+    <div class="hero-name">孤高の勇者 <small id="heroLv" style="font-size:12px; color:#aaa;">Lv.1</small></div>
+    
+    <div class="hp-container">
+        <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:2px;">
+            <span>HP</span><span id="hpText">100/100</span>
+        </div>
+        <div class="hp-bar"><div id="hpFill" class="hp-fill"></div></div>
+    </div>
+
+    <div class="hero-stats">
+        <div class="stat-box"><small>攻撃力</small><span id="atkVal" class="stat-val">10</span></div>
+        <div class="stat-box"><small>防御力</small><span id="defVal" class="stat-val">5</span></div>
+        <div class="stat-box" style="grid-column: span 2;">
+            <small>現在の装備</small>
+            <div id="equipText" style="font-size:11px; color:#aaa; margin-top:4px;">木の棒 / 布の服</div>
+        </div>
+    </div>
+</div>
 
 <div class="log-area" id="log"></div>
 
 <div class="footer">
-    <button onclick="openModal('dungeonModal')" id="dqBtn" style="background:#2980b9;">🏰潜る</button>
+    <button onclick="openModal('dungeonModal')" style="background:#2980b9;">🏰 潜る</button>
     <button id="autoBtn" onclick="toggleAuto()">オート開始</button>
 </div>
 
 <div id="dungeonModal" class="modal">
     <div class="modal-content">
-        <h3 style="margin:0; text-align:center;">🏰 ダンジョン選択</h3>
-        <div class="dungeon-list">
-            <button class="dungeon-btn" onclick="startDungeon(0)"><span>🟢 初級：静かな森</span><span>Lv1~</span></button>
-            <button class="dungeon-btn" onclick="startDungeon(1)"><span>🟡 中級：荒れた廃都</span><span>Lv15~</span></button>
-            <button class="dungeon-btn" onclick="startDungeon(2)"><span>🔴 超級：竜の巣</span><span>Lv40~</span></button>
+        <h3 style="margin:0 0 15px 0; text-align:center;">🏰 目的地を選択</h3>
+        <div style="display:grid; gap:10px;">
+            <button onclick="startDungeon(0)" style="text-align:left;">🟢 初級：静かな森 (Lv1~)</button>
+            <button onclick="startDungeon(1)" style="text-align:left;">🟡 中級：荒れた廃都 (Lv15~)</button>
+            <button onclick="startDungeon(2)" style="text-align:left;">🔴 超級：竜の巣 (Lv40~)</button>
         </div>
-        <button onclick="closeModal('dungeonModal')" style="width:100%; margin-top:10px;">戻る</button>
+        <button onclick="closeModal('dungeonModal')" style="width:100%; margin-top:15px; background:#444;">閉じる</button>
     </div>
 </div>
 
 <div id="upgradeModal" class="modal">
     <div class="modal-content">
-        <h3 style="margin:0; text-align:center;">✨ 聖杯強化</h3>
-        <div id="upRows" style="margin:15px 0;"></div>
-        <button onclick="closeModal('upgradeModal')" style="width:100%;">閉じる</button>
+        <h3 style="margin:0 0 15px 0; text-align:center;">✨ 聖杯の加護</h3>
+        <div id="upRows"></div>
+        <button onclick="closeModal('upgradeModal')" style="width:100%; margin-top:15px;">閉じる</button>
     </div>
 </div>
 
 <div id="gachaModal" class="modal">
     <div class="modal-content" style="text-align:center;">
         <h3 style="margin:0;">🎁 聖杯ガチャ</h3>
-        <div id="gachaResult" style="height:80px; display:flex; align-items:center; justify-content:center; font-weight:bold; color:var(--accent); font-size:18px;">？</div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+        <div id="gachaResult" style="height:100px; display:flex; align-items:center; justify-content:center; font-size:20px; color:var(--accent);">Ptを使って強化！</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
             <button onclick="playGacha(1)">1回 (1Pt)</button>
             <button onclick="playGacha(10)" style="background:#8e44ad;">10回 (10Pt)</button>
         </div>
-        <button onclick="closeModal('gachaModal')" style="width:100%; margin-top:10px;">閉じる</button>
+        <button onclick="closeModal('gachaModal')" style="width:100%; margin-top:15px; background:#444;">閉じる</button>
     </div>
 </div>
 
 <script>
-const SAVE_KEY = "HolyRPG_v3.4.0";
-let holy=0, autoIsOn=false, currentDungeon=null, step=0, inBattle=false;
-let bonus={atk:0, def:0, hp:0, exp:0}, party=[];
+const SAVE_KEY = "HolyRPG_Solo_v3.5";
+let holy=0, autoIsOn=false, currentDungeon=null, dungeonIdx=0, step=0, inBattle=false;
+let bonus={atk:0, def:0, hp:0};
+let hero = { lv:1, exp:0, hp:100, maxHp:100, atk:10, def:5, wName:"木の枝", wVal:0, aName:"布の服", aVal:0 };
 
 const DUNGEONS = [
-    { name:"静かな森", lv:1, pow:1, boss:"大森の王" },
-    { name:"荒れた廃都", lv:15, pow:5, boss:"亡国の騎士" },
-    { name:"竜の巣", lv:40, pow:15, boss:"古の焔竜" }
+    { name:"静かな森", pow:1, boss:"大森の王" },
+    { name:"荒れた廃都", pow:5, boss:"亡国の騎士" },
+    { name:"竜の巣", pow:15, boss:"古の焔竜" }
 ];
 
-class Char {
-    constructor(n, j, i) { 
-        this.name=n; this.job=j; this.icon=i; this.lv=1; this.exp=0; this.hp=100; this.maxHp=100; this.atk=10; this.def=5;
-        this.wName="木の枝"; this.wVal=0; this.aName="布の服"; this.aVal=0;
-    }
-    update() {
-        // インフレ抑制のため係数を0.07→0.03に、固定値を微増
-        const g = 1 + (this.lv-1)*0.03;
-        const baseH = (this.job==="せんし"?220:150);
-        this.maxHp = Math.floor((baseH + bonus.hp + (this.lv-1)*20) * g);
-        this.atk = Math.floor((15 + bonus.atk + (this.lv-1)*3 + this.wVal) * g);
-        this.def = Math.floor((10 + bonus.def + (this.lv-1)*2 + this.aVal) * g);
-        if(this.hp > this.maxHp || isNaN(this.hp)) this.hp = this.maxHp;
-    }
-}
-
-function updateUI() {
+function updateStats() {
+    const g = 1 + (hero.lv - 1) * 0.04;
+    hero.maxHp = Math.floor((200 + bonus.hp + (hero.lv-1)*25) * g);
+    hero.atk = Math.floor((15 + bonus.atk + (hero.lv-1)*4 + hero.wVal) * g);
+    hero.def = Math.floor((10 + bonus.def + (hero.lv-1)*3 + hero.aVal) * g);
+    if(hero.hp > hero.maxHp || hero.hp <= 0 && !inBattle) hero.hp = hero.maxHp;
+    
     document.getElementById("holy").innerText = holy;
-    const pl = document.getElementById("partyList"); pl.innerHTML = "";
-    party.forEach(c => {
-        c.update();
-        const d = document.createElement("div"); d.className = "char-card";
-        d.innerHTML = `
-            <div class="char-name"><span>${c.icon}${c.name}</span><span>Lv${c.lv}</span></div>
-            <div style="font-size:10px; color:#ff7675;">HP: ${Math.floor(c.hp)}/${c.maxHp}</div>
-            <div class="equip-text">⚔️[${c.wName}+${c.wVal}]</div>
-            <div class="equip-text">🛡️[${c.aName}+${c.aVal}]</div>
-        `;
-        pl.appendChild(d);
-    });
+    document.getElementById("heroLv").innerText = `Lv.${hero.lv}`;
+    document.getElementById("atkVal").innerText = hero.atk;
+    document.getElementById("defVal").innerText = hero.def;
+    document.getElementById("hpText").innerText = `${Math.floor(hero.hp)}/${hero.maxHp}`;
+    document.getElementById("hpFill").style.width = (hero.hp/hero.maxHp*100) + "%";
+    document.getElementById("equipText").innerText = `⚔️${hero.wName}+${hero.wVal} / 🛡️${hero.aName}+${hero.aVal}`;
+    
     const ur = document.getElementById("upRows"); ur.innerHTML = "";
-    [{k:'atk',n:'攻撃'},{k:'def',n:'防御'},{k:'hp',n:'体力'}].forEach(s => {
-        const r = document.createElement("div"); r.style="display:flex; justify-content:space-between; margin-bottom:5px;";
-        r.innerHTML = `<span>${s.n}:${bonus[s.k]}</span><div><button onclick="modBonus('${s.k}',-1)">-</button><button onclick="modBonus('${s.k}',1)">+</button></div>`;
+    [{k:'atk',n:'攻撃力'},{k:'def',n:'防御力'},{k:'hp',n:'最大HP'}].forEach(s => {
+        const r = document.createElement("div"); r.style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; background:#111; padding:8px; border-radius:6px;";
+        r.innerHTML = `<span>${s.n}: ${bonus[s.k]}</span><div><button onclick="modBonus('${s.k}',-1)">-</button> <button onclick="modBonus('${s.k}',1)">+</button></div>`;
         ur.appendChild(r);
     });
 }
 
 function startDungeon(idx) {
+    dungeonIdx = idx;
     currentDungeon = DUNGEONS[idx];
     step = 0; inBattle = false;
     closeModal('dungeonModal');
-    addLog(`🏰 ダンジョン「${currentDungeon.name}」に進入`);
+    addLog(`🏰 ダンジョン「${currentDungeon.name}」を開始`);
     nextBattle();
 }
 
 function nextBattle() {
     if(!currentDungeon) return;
     step++;
-    document.getElementById("battleStep").innerText = `${step} / 10`;
-    document.getElementById("pFill").style.width = (step*10) + "%";
-    
     if(step > 10) {
-        addLog(`🎉 ダンジョンクリア！聖杯Pt+3`);
-        holy += 3; currentDungeon = null; inBattle = false; save(); updateUI(); return;
+        addLog(`🎉 クリア！聖杯Pt+3`, "#2ecc71");
+        holy += 3; currentDungeon = null; save(); updateStats();
+        if(autoIsOn) setTimeout(() => startDungeon(dungeonIdx), 2000);
+        return;
     }
-
+    document.getElementById("battleStep").innerText = `${step}/10`;
     const isBoss = (step === 10);
-    const p = currentDungeon.pow * (isBoss ? 3 : 1);
-    const e = {
-        name: isBoss ? `[BOSS] ${currentDungeon.boss}` : "魔物",
-        hp: (150 + step*50) * p,
-        atk: (10 + step*5) * p,
-        def: (5 + step*3) * p
-    };
-    document.getElementById("targetName").innerText = e.name;
-    battle(e, isBoss);
+    const p = currentDungeon.pow * (isBoss ? 2.5 : 1);
+    const enemy = { name: isBoss ? `[BOSS]${currentDungeon.boss}` : "魔物", hp: (100 + step*60)*p, atk: (8 + step*5)*p, def: (5 + step*3)*p };
+    document.getElementById("targetName").innerText = enemy.name;
+    runBattle(enemy, isBoss);
 }
 
-function battle(e, isBoss) {
+function runBattle(e, isBoss) {
     inBattle = true;
     const it = setInterval(() => {
-        party.forEach(c => {
-            if(e.hp <= 0 || !c.alive) return;
-            let d = Math.max(1, c.atk - e.def);
-            if(Math.random()<0.1) { d *= 2; addLog(`${c.name}の必殺！`); }
-            e.hp -= d;
-        });
+        // 勇者の攻撃
+        let d = Math.max(1, hero.atk - e.def);
+        if(Math.random() < 0.1) { d *= 2; addLog(`💥クリティカル！`, "#f1c40f"); }
+        e.hp -= d;
 
         if(e.hp <= 0) {
             clearInterval(it);
-            addLog(`${e.name}を撃破`);
-            if(isBoss) dropUnique();
-            party.forEach(c => { c.exp += 40; if(c.exp>=100){ c.lv++; c.exp=0; addLog(`${c.name}LvUP`); } });
-            inBattle = false; save(); updateUI();
+            addLog(`${e.name}を倒した`);
+            if(isBoss) dropItem();
+            hero.exp += 50; if(hero.exp>=100){ hero.lv++; hero.exp=0; addLog(`🆙レベルアップ！`, "#f1c40f"); }
+            inBattle = false; save(); updateStats();
             if(autoIsOn) setTimeout(nextBattle, 1000);
         } else {
-            const t = party.find(c => c.hp > 0);
-            if(!t) { clearInterval(it); addLog("全滅..."); currentDungeon=null; inBattle=false; updateUI(); return; }
-            t.hp -= Math.max(1, e.atk - t.def);
-            if(t.hp <= 0) t.hp = 0;
-            updateUI();
+            // 敵の攻撃
+            hero.hp -= Math.max(1, e.atk - hero.def);
+            updateStats();
+            if(hero.hp <= 0) {
+                clearInterval(it);
+                hero.hp = 0; addLog("💀全滅... キャンプへ戻ります", "#e74c3c");
+                inBattle = false; updateStats();
+                // オートなら5秒後に再開
+                if(autoIsOn) {
+                    addLog("⏳再挑戦の準備中...", "#888");
+                    setTimeout(() => { hero.hp = hero.maxHp; startDungeon(dungeonIdx); }, 5000);
+                } else {
+                    currentDungeon = null;
+                }
+            }
         }
-    }, 150);
+    }, 200);
 }
 
-function dropUnique() {
-    const target = party[Math.floor(Math.random()*4)];
-    const prefixes = ["伝説の", "古びた", "光輝く", "血塗られた", "聖なる"];
+function dropItem() {
+    const prefixes = ["伝説の", "古の", "聖なる", "呪われた", "神の"];
     if(Math.random() > 0.5) {
-        target.wName = prefixes[Math.floor(Math.random()*5)] + "剣";
-        target.wVal += (currentDungeon.pow * 5);
-        addLog(`🎁 ${target.name}が「${target.wName}」を入手！`, "#f1c40f");
+        hero.wName = prefixes[Math.floor(Math.random()*5)] + "剣";
+        hero.wVal += (currentDungeon.pow * 4);
+        addLog(`🎁 ユニーク武器「${hero.wName}」を獲得！`, "#f1c40f");
     } else {
-        target.aName = prefixes[Math.floor(Math.random()*5)] + "鎧";
-        target.aVal += (currentDungeon.pow * 5);
-        addLog(`🎁 ${target.name}が「${target.aName}」を入手！`, "#f1c40f");
+        hero.aName = prefixes[Math.floor(Math.random()*5)] + "鎧";
+        hero.aVal += (currentDungeon.pow * 4);
+        addLog(`🎁 ユニーク防具「${hero.aName}」を獲得！`, "#f1c40f");
     }
 }
 
 function playGacha(t) {
-    if(holy < t) return;
-    holy -= t;
+    if(holy < t) return; holy -= t;
     let res = "";
     for(let i=0; i<t; i++) {
-        const c = party[Math.floor(Math.random()*4)];
-        if(Math.random()>0.5) { c.wVal += 2; res = "武器強化！"; }
-        else { c.aVal += 2; res = "防具強化！"; }
+        if(Math.random()>0.5) { hero.wVal += 2; res = "⚔️武器強化(+2)"; }
+        else { hero.aVal += 2; res = "🛡️防具強化(+2)"; }
     }
-    document.getElementById("gachaResult").innerText = t > 1 ? "10連強化完了！" : res;
-    updateUI(); save();
+    document.getElementById("gachaResult").innerText = t > 1 ? `10連：装備が大幅に強化！` : res;
+    updateStats(); save();
 }
 
 function modBonus(k, v) {
     if(v > 0) { if(holy>=1){ bonus[k]+=1; holy-=1; } }
     else { if(bonus[k]>0){ bonus[k]-=1; holy+=1; } }
-    updateUI(); save();
+    updateStats(); save();
 }
 
-function toggleAuto() { autoIsOn = !autoIsOn; document.getElementById("autoBtn").classList.toggle("toggleOn", autoIsOn); if(autoIsOn && !inBattle) nextBattle(); }
+function toggleAuto() { autoIsOn = !autoIsOn; document.getElementById("autoBtn").classList.toggle("toggleOn", autoIsOn); if(autoIsOn && !inBattle && !currentDungeon) startDungeon(dungeonIdx); }
 function openModal(id) { document.getElementById(id).style.display = "flex"; }
 function closeModal(id) { document.getElementById(id).style.display = "none"; }
-function addLog(m, col="#888") {
+function addLog(m, col="#aaa") {
     const l = document.getElementById("log"); const d = document.createElement("div");
-    d.style.color = col; d.innerText = m; l.appendChild(d);
-    if(l.childNodes.length > 20) l.removeChild(l.firstChild);
+    d.style.color = col; d.innerText = m; l.prepend(d);
+    if(l.childNodes.length > 20) l.removeChild(l.lastChild);
 }
 
 function save() {
-    const d = { holy, bonus, party: party.map(c => ({n:c.name, j:c.job, i:c.icon, lv:c.lv, wN:c.wName, wV:c.wVal, aN:c.aName, aV:c.aVal}))};
+    const d = { holy, bonus, hero: {lv:hero.lv, wN:hero.wName, wV:hero.wVal, aN:hero.aName, aV:hero.aVal}, dungeonIdx};
     localStorage.setItem(SAVE_KEY, JSON.stringify(d));
 }
 function load() {
     const s = localStorage.getItem(SAVE_KEY);
     if(s) {
-        const d = JSON.parse(s); holy=d.holy; bonus=d.bonus;
-        party = d.party.map(p => { 
-            let c=new Char(p.n, p.j, p.i); c.lv=p.lv; c.wName=p.wN; c.wVal=p.wV; c.aName=p.aN; c.aVal=p.aV; return c; 
-        });
-    } else {
-        party = [new Char("レオン","せんし","⚔️"), new Char("ミラ","とうぞく","🗡️"), new Char("アーク","まほうつかい","🪄"), new Char("セラ","そうりょ","🕊️")];
+        const d = JSON.parse(s); holy=d.holy; bonus=d.bonus; dungeonIdx=d.dungeonIdx||0;
+        hero.lv=d.hero.lv; hero.wName=d.hero.wN; hero.wVal=d.hero.wV; hero.aName=d.hero.aN; hero.aVal=d.hero.aV;
     }
 }
-load(); updateUI();
+load(); updateStats();
 </script>
 </body>
 </html>
