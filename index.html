@@ -83,6 +83,7 @@ class Character {
     this.alive = true;
   }
 }
+
 class Enemy {
   constructor(hp, atk, def) {
     this.hp = hp;
@@ -98,162 +99,180 @@ let rebirthCount = 0;
 let speed = 1;
 let autoTimer = null;
 let currentEnemy = null;
-let party = Array.from({length:5}, ()=>new Character());
+let party = Array.from({ length: 5 }, () => new Character());
 
 /* ===== 成長 ===== */
-function expToNextLevel(lv){
-  return Math.floor(20 * Math.pow(lv,1.6));
+function expToNextLevel(lv) {
+  return Math.floor(20 * Math.pow(lv, 1.6));
 }
-function rand(min,max){
-  return Math.floor(Math.random()*(max-min+1))+min;
+
+function rand(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
 }
-function levelUp(c){
+
+function levelUp(c) {
   c.level++;
-  c.maxHp += rand(10,15);
-  c.atk += rand(2,4);
-  c.def += rand(1,2);
+  c.maxHp += rand(10, 15);
+  c.atk += rand(2, 4);
+  c.def += rand(1, 2);
   c.hp = c.maxHp;
 }
-function addExp(c,val){
+
+function addExp(c, val) {
   c.exp += val;
-  while(c.exp >= expToNextLevel(c.level)){
+  while (c.exp >= expToNextLevel(c.level)) {
     c.exp -= expToNextLevel(c.level);
     levelUp(c);
   }
 }
 
 /* ===== バトル ===== */
-function calcDamageWithSkill(c, enemy){
+function calcDamageWithSkill(c, enemy) {
   let atk = c.atk;
-  if (c.hp / c.maxHp <= 0.5) atk *= 2; // 覚醒スキル
+  if (c.hp / c.maxHp <= 0.5) atk *= 2; // 覚醒
   return Math.max(1, atk - enemy.def);
 }
-function randomAlive(){
-  const a = party.filter(c=>c.alive);
-  return a[Math.floor(Math.random()*a.length)];
+
+function randomAlive() {
+  const a = party.filter(c => c.alive);
+  return a[Math.floor(Math.random() * a.length)];
 }
-function reviveParty(){
-  party.forEach(c=>{
-    c.alive=true;
-    c.hp=c.maxHp;
+
+function reviveParty() {
+  party.forEach(c => {
+    c.alive = true;
+    c.hp = c.maxHp;
   });
 }
-function createEnemy(dist){
+
+function createEnemy(dist) {
   return new Enemy(
-    Math.floor(50 + dist*0.5),
-    Math.floor(5 + dist*0.05),
-    Math.floor(dist*0.02)
+    Math.floor(50 + dist * 0.5),
+    Math.floor(5 + dist * 0.05),
+    Math.floor(dist * 0.02)
   );
 }
-function battle(enemy, end){
-  const it = setInterval(()=>{
-    for(const c of party){
-      if(!c.alive) continue;
+
+function battle(enemy, end) {
+  const it = setInterval(() => {
+    for (const c of party) {
+      if (!c.alive) continue;
       enemy.hp -= calcDamageWithSkill(c, enemy);
-      if(enemy.hp<=0) break;
+      if (enemy.hp <= 0) break;
     }
+
     updateEnemyUI();
-    if(enemy.hp<=0){
+
+    if (enemy.hp <= 0) {
       clearInterval(it);
-      party.forEach(c=>c.alive && addExp(c,10));
+      party.forEach(c => c.alive && addExp(c, 10));
       reviveParty();
       end();
       return;
     }
+
     const t = randomAlive();
     t.hp -= Math.max(1, enemy.atk - t.def);
-    if(t.hp<=0) t.alive=false;
-    if(!party.some(c=>c.alive)){
+    if (t.hp <= 0) t.alive = false;
+
+    if (!party.some(c => c.alive)) {
       clearInterval(it);
       reviveParty();
       end();
     }
+
     updateUI();
-  }, 1000/speed);
+  }, 800 / speed); // ← 8倍速対応
 }
 
 /* ===== 進行 ===== */
-function stepDungeon(){
+function stepDungeon() {
   distance += 10;
   currentEnemy = createEnemy(distance);
   updateEnemyUI();
-  battle(currentEnemy, ()=>{
+  battle(currentEnemy, () => {
     saveGame();
     updateUI();
   });
 }
 
 /* ===== UI ===== */
-function updateUI(){
+function updateUI() {
   document.getElementById("distance").textContent = distance;
   document.getElementById("rebirth").textContent = rebirthCount;
+
   const p = document.getElementById("party");
-  p.innerHTML="";
-  party.forEach((c,i)=>{
-    const d=document.createElement("div");
-    d.className=c.alive?"":"dead";
+  p.innerHTML = "";
+  party.forEach((c, i) => {
+    const d = document.createElement("div");
+    d.className = c.alive ? "" : "dead";
     d.textContent =
-      `#${i+1} Lv${c.level} HP ${c.hp}/${c.maxHp} ATK ${c.atk} DEF ${c.def}`;
+      `#${i + 1} Lv${c.level} HP ${c.hp}/${c.maxHp} ATK ${c.atk} DEF ${c.def}`;
     p.appendChild(d);
   });
 }
-function updateEnemyUI(){
-  if(!currentEnemy) return;
+
+function updateEnemyUI() {
+  if (!currentEnemy) return;
   document.getElementById("enemyText").textContent =
     `HP ${currentEnemy.hp}/${currentEnemy.maxHp}`;
   document.getElementById("enemyHpBar").style.width =
-    (currentEnemy.hp/currentEnemy.maxHp*100)+"%";
+    (currentEnemy.hp / currentEnemy.maxHp * 100) + "%";
 }
 
 /* ===== 操作 ===== */
-function toggleAuto(){
-  if(autoTimer){
+function toggleAuto() {
+  if (autoTimer) {
     clearInterval(autoTimer);
-    autoTimer=null;
-  }else{
-    autoTimer=setInterval(stepDungeon,3000/speed);
+    autoTimer = null;
+  } else {
+    autoTimer = setInterval(stepDungeon, 3000 / speed);
   }
 }
-function setSpeed(v){
-  speed=v;
-  if(autoTimer){
+
+function setSpeed(v) {
+  speed = v;
+  if (autoTimer) {
     clearInterval(autoTimer);
-    autoTimer=setInterval(stepDungeon,3000/speed);
+    autoTimer = setInterval(stepDungeon, 3000 / speed);
   }
 }
-function rebirth(){
+
+function rebirth() {
   rebirthCount++;
-  distance=0;
-  party.forEach(c=>{
-    c.level=1;
-    c.exp=0;
-    c.maxHp=100+rebirthCount*20;
-    c.atk=10+rebirthCount*5;
-    c.def=5+rebirthCount*3;
-    c.hp=c.maxHp;
-    c.alive=true;
+  distance = 0;
+  party.forEach(c => {
+    c.level = 1;
+    c.exp = 0;
+    c.maxHp = 100 + rebirthCount * 20;
+    c.atk = 10 + rebirthCount * 5;
+    c.def = 5 + rebirthCount * 3;
+    c.hp = c.maxHp;
+    c.alive = true;
   });
   saveGame();
   updateUI();
 }
-function resetGame(){
+
+function resetGame() {
   localStorage.removeItem("autoRPG_save");
   location.reload();
 }
 
 /* ===== セーブ ===== */
-function saveGame(){
+function saveGame() {
   localStorage.setItem("autoRPG_save",
-    JSON.stringify({distance,rebirthCount,party})
+    JSON.stringify({ distance, rebirthCount, party })
   );
 }
-function loadGame(){
-  const r=localStorage.getItem("autoRPG_save");
-  if(!r) return;
-  const d=JSON.parse(r);
-  distance=d.distance;
-  rebirthCount=d.rebirthCount;
-  d.party.forEach((c,i)=>Object.assign(party[i],c));
+
+function loadGame() {
+  const r = localStorage.getItem("autoRPG_save");
+  if (!r) return;
+  const d = JSON.parse(r);
+  distance = d.distance;
+  rebirthCount = d.rebirthCount;
+  d.party.forEach((c, i) => Object.assign(party[i], c));
 }
 
 /* ===== 起動 ===== */
@@ -261,5 +280,4 @@ loadGame();
 updateUI();
 </script>
 
-</body>
-</html>
+  
