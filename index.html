@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <title>聖杯オートRPG</title>
-
 <style>
 body{
   margin:0;
@@ -49,13 +48,12 @@ button:active{background:#666;}
 
 .log{
   font-size:20px;
-  max-height:110px;
+  max-height:150px;
   overflow-y:auto;
   line-height:1.3;
 }
 </style>
 </head>
-
 <body>
 
 <h2>聖杯オートRPG</h2>
@@ -145,11 +143,20 @@ let autoUpgrade=false;
 let party=[];
 let enemy=null;
 let autoTimer=null;
+let logQueue=[]; // アニメ用キュー
+let logTimer=null;
 
 /* ===== ログ ===== */
 function addLog(t){
- log.innerHTML=t+"<br>"+log.innerHTML;
+ logQueue.push(t);
+ if(!logTimer) runLogQueue();
+}
+function runLogQueue(){
+ if(logQueue.length===0){ logTimer=null; return; }
+ const line = logQueue.shift();
+ log.innerHTML = line + "<br>" + log.innerHTML;
  log.scrollTop = 0;
+ logTimer = setTimeout(runLogQueue, 400);
 }
 
 /* ===== 成長 ===== */
@@ -162,7 +169,6 @@ function gainExp(c,val){
   c.maxHp+=10;
   c.atk+=2;
   c.def+=1;
-  c.hp=c.maxHp;
   addLog(c.name+" LvUP!");
  }
 }
@@ -177,20 +183,22 @@ function initParty(){
       c.maxHp = j.hp + bonus.hp + (c.level-1)*10;
       c.atk = j.atk + bonus.atk + (c.level-1)*2;
       c.def = j.def + bonus.def + (c.level-1)*1;
-      c.hp = c.maxHp;
-      c.alive = true;
+      if(c.hp>c.maxHp) c.hp = c.maxHp; // HP上限調整
+      c.alive = c.hp>0;
     });
   }
 }
 
 /* ===== バトル ===== */
 function battle(end){
+  enemy.hp = enemy.hp>0 ? enemy.hp : enemy.maxHp; // 敵HPリセット
   const it = setInterval(()=>{
     // パーティ攻撃
     party.forEach(c=>{
       if(!c.alive) return;
       const dmg = Math.max(1, c.atk - enemy.def);
       enemy.hp -= dmg;
+      if(enemy.hp<0) enemy.hp=0;
       addLog(`${c.name} は ${enemy.name} に ${dmg} のダメージを与えた！`);
     });
     updateEnemyUI();
@@ -206,8 +214,9 @@ function battle(end){
         if(autoUpgrade) autoSpend();
       }
       floor++;
-      party.forEach(c=>{c.hp=c.maxHp; c.alive=true;});
+      party.forEach(c=>{if(c.alive)c.hp=c.hp;}); // パーティHP維持
       end();
+      updateUI();
       return;
     }
 
@@ -216,10 +225,12 @@ function battle(end){
     if(!t){
       party.forEach(c=>{c.hp=c.maxHp; c.alive=true;});
       addLog("全滅→復活");
+      updateUI();
       return;
     }
     const dmg = Math.max(1, enemy.atk - t.def);
     t.hp -= dmg;
+    if(t.hp<0) t.hp=0;
     addLog(`${enemy.name} は ${t.name} に ${dmg} のダメージを与えた！`);
     if(t.hp <= 0){
       t.alive = false;
@@ -233,7 +244,7 @@ function battle(end){
 function stepDungeon(){
  enemy=new Enemy(floor);
  updateEnemyUI();
- battle(()=>{save();updateUI();});
+ battle(()=>{save(); updateUI();});
 }
 function toggleAuto(){
  autoTimer?
@@ -323,7 +334,5 @@ load();
 initParty();
 updateUI();
 </script>
-
-
 </body>
 </html>
