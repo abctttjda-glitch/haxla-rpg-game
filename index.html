@@ -5,53 +5,60 @@
 <title>オートRPG</title>
 
 <style>
+/* ===== 全体 ===== */
 body{
+  margin:0;
   background:#111;
   color:#eee;
   font-family:sans-serif;
-  font-size:16px;
-  padding:8px;
+  font-size:14px;           /* 全体を小さく */
+  padding:6px;
 }
 
-h2{ font-size:20px; }
+/* ===== 見出し ===== */
+h2{
+  font-size:18px;
+  margin:4px 0;
+}
 
+/* ===== パネル ===== */
 .panel{
   background:#1a1a1a;
   border:1px solid #444;
   border-radius:6px;
-  padding:8px;
-  margin-bottom:10px;
+  padding:6px;
+  margin-bottom:6px;
 }
 
+/* ===== ボタン ===== */
 button{
   background:#333;
   color:#eee;
   border:1px solid #555;
   border-radius:6px;
-  font-size:18px;
-  padding:8px 12px;
-  margin:4px;
+  font-size:15px;
+  padding:6px 10px;
+  margin:2px;
 }
 
-/* 押してる間 */
 button:active{
   background:#666;
-  transform:scale(0.97);
+  transform:scale(0.96);
 }
 
-/* ON状態 */
 button.active{
   background:#2ecc71;
   color:#000;
 }
 
+/* ===== その他 ===== */
 .dead{ opacity:0.4; }
 
 .barWrap{
   background:#333;
   width:100%;
-  height:14px;
-  border-radius:7px;
+  height:10px;
+  border-radius:5px;
   overflow:hidden;
 }
 
@@ -68,7 +75,7 @@ button.active{
 <h2>オートRPG</h2>
 
 <div class="panel">
-  距離：<span id="distance">0</span> m<br>
+  距離：<span id="distance">0</span> m　
   転生：<span id="rebirth">0</span>
 </div>
 
@@ -109,9 +116,12 @@ function generateWeapon(){
 /* ===== キャラ ===== */
 class Character{
   constructor(){
-    this.level=1; this.exp=0;
-    this.maxHp=100; this.hp=100;
-    this.atk=10; this.def=5;
+    this.level=1;
+    this.exp=0;
+    this.maxHp=100;
+    this.hp=100;
+    this.atk=10;
+    this.def=5;
     this.alive=true;
     this.weapon=generateWeapon();
     this.skill=Math.random()<0.3?"連撃":"強撃";
@@ -137,11 +147,17 @@ let autoTimer=null, currentEnemy=null;
 let party=Array.from({length:5},()=>new Character());
 
 /* ===== 成長 ===== */
-function expToNextLevel(lv){ return Math.floor(20*Math.pow(lv,1.6)); }
-function rand(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
+function expToNextLevel(lv){
+  return Math.floor(20*Math.pow(lv,1.6));
+}
+function rand(a,b){
+  return Math.floor(Math.random()*(b-a+1))+a;
+}
 function levelUp(c){
-  c.level++; c.maxHp+=rand(10,15);
-  c.atk+=rand(2,4); c.def+=rand(1,2);
+  c.level++;
+  c.maxHp+=rand(8,12);
+  c.atk+=rand(2,3);
+  c.def+=rand(1,2);
   c.hp=c.maxHp;
 }
 function addExp(c,v){
@@ -180,20 +196,28 @@ function battle(enemy,end){
       }
       if(enemy.hp<=0) break;
     }
+
     updateEnemyUI();
+
     if(enemy.hp<=0){
       clearInterval(it);
       party.forEach(c=>c.alive&&addExp(c,10));
-      reviveParty(); end(); return;
+      reviveParty();
+      end();
+      return;
     }
+
     const t=randomAlive();
     t.hp-=Math.max(1,enemy.atk-t.def);
     if(t.hp<=0) t.alive=false;
+
     if(!party.some(c=>c.alive)){
-      clearInterval(it); reviveParty(); end();
+      clearInterval(it);
+      reviveParty();
+      end();
     }
     updateUI();
-  },800/speed);
+  },700/speed);
 }
 
 /* ===== 進行 ===== */
@@ -212,7 +236,8 @@ function updateUI(){
   party.forEach((c,i)=>{
     const d=document.createElement("div");
     d.className=c.alive?"":"dead";
-    d.textContent=`#${i+1} Lv${c.level} HP ${c.hp}/${c.maxHp} 武器${c.weapon.rarity}`;
+    d.textContent=
+      `#${i+1} Lv${c.level} HP ${c.hp}/${c.maxHp} ATK ${c.atk} DEF ${c.def} 武器${c.weapon.rarity}`;
     partyEl.appendChild(d);
   });
 }
@@ -227,24 +252,27 @@ function updateEnemyUI(){
 function toggleAuto(){
   autoBtn.classList.toggle("active");
   if(autoTimer){
-    clearInterval(autoTimer); autoTimer=null;
+    clearInterval(autoTimer);
+    autoTimer=null;
   }else{
-    autoTimer=setInterval(stepDungeon,3000/speed);
+    autoTimer=setInterval(stepDungeon,2500/speed);
   }
 }
 
 function setSpeed(v){
   speed=v;
-  document.querySelectorAll(".speedBtn").forEach(b=>b.classList.remove("active"));
+  document.querySelectorAll(".speedBtn")
+    .forEach(b=>b.classList.remove("active"));
   event.target.classList.add("active");
   if(autoTimer){
     clearInterval(autoTimer);
-    autoTimer=setInterval(stepDungeon,3000/speed);
+    autoTimer=setInterval(stepDungeon,2500/speed);
   }
 }
 
 function rebirth(){
-  rebirthCount++; distance=0;
+  rebirthCount++;
+  distance=0;
   party=Array.from({length:5},()=>new Character());
   updateUI();
 }
@@ -264,11 +292,12 @@ function loadGame(){
   const r=localStorage.getItem("autoRPG_save");
   if(!r) return;
   const d=JSON.parse(r);
-  distance=d.distance; rebirthCount=d.rebirthCount;
+  distance=d.distance;
+  rebirthCount=d.rebirthCount;
   party=d.party.map(p=>Object.assign(new Character(),p));
 }
 
-/* ===== DOM参照 ===== */
+/* ===== DOM ===== */
 const distanceEl=document.getElementById("distance");
 const rebirthEl=document.getElementById("rebirth");
 const partyEl=document.getElementById("party");
