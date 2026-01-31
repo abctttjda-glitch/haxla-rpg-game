@@ -50,7 +50,7 @@ button:active{background:#666;}
 .log{
   font-size:20px;
   max-height:110px;
-  overflow:hidden;
+  overflow-y:auto;
   line-height:1.3;
 }
 </style>
@@ -149,6 +149,7 @@ let autoTimer=null;
 /* ===== ログ ===== */
 function addLog(t){
  log.innerHTML=t+"<br>"+log.innerHTML;
+ log.scrollTop = 0;
 }
 
 /* ===== 成長 ===== */
@@ -168,41 +169,64 @@ function gainExp(c,val){
 
 /* ===== 初期化 ===== */
 function initParty(){
- party=CHAR_DATA.map(d=>new Character(d,bonus));
+  if(party.length === 0){
+    party = CHAR_DATA.map(d=>new Character(d, bonus));
+  } else {
+    party.forEach(c=>{
+      const j = JOBS[c.job];
+      c.maxHp = j.hp + bonus.hp + (c.level-1)*10;
+      c.atk = j.atk + bonus.atk + (c.level-1)*2;
+      c.def = j.def + bonus.def + (c.level-1)*1;
+      c.hp = c.maxHp;
+      c.alive = true;
+    });
+  }
 }
 
 /* ===== バトル ===== */
 function battle(end){
- const it=setInterval(()=>{
-  party.forEach(c=>{
-   if(!c.alive) return;
-   enemy.hp-=Math.max(1,c.atk-enemy.def);
-  });
-  updateEnemyUI();
-  if(enemy.hp<=0){
-   clearInterval(it);
-   kills++;
-   party.forEach(c=>gainExp(c,5));
-   if(kills%10===0){
-    holy++;
-    addLog("聖杯Pt +1");
-    if(autoUpgrade) autoSpend();
-   }
-   floor++;
-   party.forEach(c=>{c.hp=c.maxHp;c.alive=true;});
-   end();
-   return;
-  }
-  const t=party.find(c=>c.alive);
-  if(!t){
-   party.forEach(c=>{c.hp=c.maxHp;c.alive=true;});
-   addLog("全滅→復活");
-   return;
-  }
-  t.hp-=Math.max(1,enemy.atk-t.def);
-  if(t.hp<=0)t.alive=false;
-  updateUI();
- },800/SPEED);
+  const it = setInterval(()=>{
+    // パーティ攻撃
+    party.forEach(c=>{
+      if(!c.alive) return;
+      const dmg = Math.max(1, c.atk - enemy.def);
+      enemy.hp -= dmg;
+      addLog(`${c.name} は ${enemy.name} に ${dmg} のダメージを与えた！`);
+    });
+    updateEnemyUI();
+    
+    if(enemy.hp <= 0){
+      clearInterval(it);
+      kills++;
+      party.forEach(c=>gainExp(c,5));
+      addLog(`${enemy.name} を倒した！`);
+      if(kills % 10 === 0){
+        holy++;
+        addLog("聖杯Pt +1");
+        if(autoUpgrade) autoSpend();
+      }
+      floor++;
+      party.forEach(c=>{c.hp=c.maxHp; c.alive=true;});
+      end();
+      return;
+    }
+
+    // 敵攻撃
+    const t = party.find(c => c.alive);
+    if(!t){
+      party.forEach(c=>{c.hp=c.maxHp; c.alive=true;});
+      addLog("全滅→復活");
+      return;
+    }
+    const dmg = Math.max(1, enemy.atk - t.def);
+    t.hp -= dmg;
+    addLog(`${enemy.name} は ${t.name} に ${dmg} のダメージを与えた！`);
+    if(t.hp <= 0){
+      t.alive = false;
+      addLog(`${t.name} は倒れた！`);
+    }
+    updateUI();
+  }, 800 / SPEED);
 }
 
 /* ===== 操作 ===== */
@@ -259,7 +283,7 @@ function updateEnemyUI(){
 /* ===== セーブ ===== */
 function save(){
  localStorage.setItem("holyRPG",JSON.stringify({
-  floor,kills,holy,bonus,autoUpgrade
+  floor,kills,holy,bonus,autoUpgrade,party
  }));
 }
 function load(){
@@ -268,10 +292,23 @@ function load(){
  const d=JSON.parse(r);
  floor=d.floor;kills=d.kills;holy=d.holy;
  bonus=d.bonus;autoUpgrade=d.autoUpgrade;
+ if(d.party){
+   party = d.party.map(p=>{
+     const c = new Character({name:p.name,job:p.job}, bonus);
+     c.level = p.level;
+     c.exp = p.exp;
+     c.maxHp = p.maxHp;
+     c.atk = p.atk;
+     c.def = p.def;
+     c.hp = p.hp;
+     c.alive = p.alive;
+     return c;
+   });
+ }
 }
 
 /* ===== DOM ===== */
-const partyEl=party=document.getElementById("party");
+const partyEl=document.getElementById("party");
 const enemyName=document.getElementById("enemyName");
 const enemyText=document.getElementById("enemyText");
 const enemyHpBar=document.getElementById("enemyHpBar");
@@ -286,6 +323,7 @@ load();
 initParty();
 updateUI();
 </script>
+
 
 </body>
 </html>
