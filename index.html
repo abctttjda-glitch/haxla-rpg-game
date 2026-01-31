@@ -2,139 +2,125 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>聖杯オートRPG v2.5.0</title>
+<title>聖杯オートRPG v2.6.0</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <style>
 :root { --main-bg: #111; --panel-bg: #1e1e1e; --accent: #f1c40f; --text: #eee; --btn-bg: #333; }
 * { touch-action: manipulation; box-sizing: border-box; -webkit-user-select: none; }
 body { 
-    margin:0; background:var(--main-bg); color:var(--text); font-family:sans-serif; font-size:13px; padding:4px;
+    margin:0; background:var(--main-bg); color:var(--text); font-family:sans-serif; font-size:12px; padding:2px;
     height:100vh; overflow:hidden; display:flex; flex-direction:column;
 }
-.panel { background:var(--panel-bg); border:1px solid #444; border-radius:6px; padding:5px; margin-bottom:4px; }
-button { background:var(--btn-bg); color:#eee; border:1px solid #555; border-radius:4px; cursor:pointer; font-size:12px; transition: 0.1s; }
-button:active { transform: scale(0.95); background: #444; }
+.panel { background:var(--panel-bg); border:1px solid #444; border-radius:4px; padding:4px; margin-bottom:2px; }
+button { background:var(--btn-bg); color:#eee; border:1px solid #555; border-radius:4px; cursor:pointer; padding:6px 2px; }
 .active { background:var(--accent) !important; color:#000 !important; font-weight:bold; }
 .toggleOn { background:#2ecc71 !important; color:#000; font-weight:bold; }
 
-/* ヘッダー・状況 */
-.header-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
-.enemy-panel { display: flex; align-items: center; gap: 8px; height: 26px; }
-.hp-bar-outer { flex-grow: 1; background:#333; height:12px; border-radius:6px; overflow:hidden; position:relative; }
+/* ヘッダー */
+.header { display: grid; grid-template-columns: 1fr 1.5fr; gap: 4px; }
+.top-menu { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
+
+/* 戦闘エリア */
+.battle-area { display: flex; align-items: center; gap: 6px; height: 24px; padding: 0 4px; }
+.hp-bar-outer { flex-grow: 1; background:#333; height:10px; border-radius:5px; overflow:hidden; position:relative; }
 .hp-bar-inner { background:#e74c3c; height:100%; width:0%; transition: width 0.1s; }
-.hp-text { position:absolute; width:100%; text-align:center; font-size:10px; font-weight:bold; top:0px; line-height:12px; }
+.hp-text { position:absolute; width:100%; text-align:center; font-size:9px; font-weight:bold; top:-1px; }
 
-/* パーティ・ログ（中央） */
-.main-content { display: grid; grid-template-columns: 1.2fr 1fr; gap: 4px; flex: 1; min-height: 0; }
+/* メイン（パーティ＆ログ） */
+.main-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 2px; flex: 1; min-height: 0; }
 .party-list { overflow-y: auto; }
-.char-card { border-bottom: 1px solid #333; padding: 4px 0; cursor: pointer; }
-.char-card:hover { background: rgba(255,255,255,0.05); }
-.char-info { display:flex; justify-content:space-between; font-weight:bold; }
-.job-tag { font-size: 9px; color: var(--accent); border: 1px solid var(--accent); padding: 0 2px; border-radius: 2px; }
-.log { background:#000; padding:4px; overflow-y:auto; display:flex; flex-direction:column-reverse; border:1px solid #333; border-radius:4px; font-size: 10px; line-height: 1.2; }
+.char-row { border-bottom: 1px solid #333; padding: 3px 0; cursor: pointer; }
+.char-row:active { background: #222; }
+.log { background:#000; padding:2px; overflow-y:auto; display:flex; flex-direction:column-reverse; border:1px solid #333; font-size: 10px; line-height: 1.1; }
 
-/* 操作パネル（コンパクト） */
-.action-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 6px; }
-.menu-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 4px; }
-
-/* モーダル共通 */
+/* モーダル */
 .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 100; justify-content: center; align-items: center; }
-.modal-content { background: #2c3e50; border: 2px solid #555; border-radius: 10px; width: 90%; max-width: 320px; padding: 15px; position: relative; }
-.modal-close { position: absolute; top: 5px; right: 10px; font-size: 20px; color: #aaa; cursor: pointer; }
+.modal-content { background: #2c3e50; border: 2px solid #555; border-radius: 8px; width: 85%; max-width: 300px; padding: 12px; }
 
-/* 強化用スタイル */
-.up-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin: 10px 0; }
-.up-btn { display: flex; flex-direction: column; align-items: center; padding: 8px; }
+/* 強化画面用 */
+.up-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 8px 0; }
+.up-btn { display: flex; flex-direction: column; font-size: 11px; }
+
+/* フッター */
+.footer { display: grid; grid-template-columns: 1fr 2.5fr; gap: 4px; margin-top: 2px; }
+.footer button { font-size: 16px; padding: 10px 0; font-weight: bold; }
 </style>
 </head>
 <body>
 
-<div class="header-grid">
+<div class="header">
     <div class="panel">
         <strong><span id="floor">1</span>F</strong> <small>(<span id="holy">0</span>Pt)</small>
-        <div style="font-size:10px; color:#a29bfe;">🐾Lv<span id="petLv">1</span> / <span id="killCount">0/10</span></div>
+        <div style="font-size:9px; color:#a29bfe;">🐾Lv<span id="petLv">1</span> / <span id="killCount">0/10</span></div>
     </div>
-    <div class="menu-btns">
-        <button onclick="openModal('upgradeModal')" style="background:#5d5d5d;">✨ 聖杯強化</button>
-        <button onclick="openModal('casinoModal')" style="background:#5d5d5d;">🎰 カジノ</button>
-        <button onclick="warpMax()" style="grid-column: span 2">Warp Max</button>
+    <div class="top-menu">
+        <button onclick="openModal('upgradeModal')" style="background:#555">✨聖杯強化</button>
+        <button onclick="openModal('casinoModal')" style="background:#555">🎰カジノ</button>
+        <button onclick="warpMax()" style="grid-column: span 2; font-size:10px;">Warp Max</button>
     </div>
 </div>
 
-<div class="panel enemy-panel">
-    <div style="font-size:11px; font-weight:bold; min-width:45px;" id="enemyName">---</div>
+<div class="panel battle-area">
+    <div style="font-size:10px; font-weight:bold; min-width:50px; overflow:hidden;" id="enemyName">---</div>
     <div class="hp-bar-outer">
         <div id="enemyHpBar" class="hp-bar-inner"></div>
         <div class="hp-text" id="enemyHpNum">0/0</div>
     </div>
 </div>
 
-<div class="main-content">
+<div class="main-grid">
     <div class="panel party-list" id="partyList"></div>
     <div class="log" id="log"></div>
 </div>
 
-<div class="panel action-panel">
-    <button onclick="stepDungeon()" style="padding: 12px 0; font-weight: bold; font-size: 14px;">探索</button>
-    <button id="mainAutoBtn" onclick="toggleAuto()" style="padding: 12px 0; font-weight: bold; font-size: 14px;">オート開始</button>
+<div class="footer">
+    <button onclick="stepDungeon()">探索</button>
+    <button id="mainAutoBtn" onclick="toggleAuto()">オート開始</button>
 </div>
 
-<div id="charModal" class="modal">
-    <div class="modal-content">
-        <span class="modal-close" onclick="closeModal('charModal')">&times;</span>
-        <h3 id="m-name" style="margin:0"></h3>
-        <hr style="border:0; border-top:1px solid #555;">
-        <div id="m-status" style="font-size:13px; line-height:1.6;"></div>
-        <div id="m-skill" style="margin-top:10px; color:var(--accent); font-size:12px; font-style:italic;"></div>
-        <div style="margin-top:10px; padding:5px; background:rgba(0,0,0,0.3); border-radius:4px; font-size:11px;">
-            ⚔️ <span id="m-weapon"></span><br>
-            🛡️ <span id="m-armor"></span>
-        </div>
-    </div>
-</div>
+<div id="charModal" class="modal"><div class="modal-content" id="m-content"></div></div>
 
 <div id="upgradeModal" class="modal">
     <div class="modal-content">
-        <span class="modal-close" onclick="closeModal('upgradeModal')">&times;</span>
-        <h3 style="margin:0; text-align:center;">✨ 聖杯強化</h3>
-        <div style="text-align:center; font-size:11px;">所持Pt: <span id="holy2">0</span></div>
-        <div style="display:flex; justify-content:center; gap:2px; margin:10px 0;">
+        <h3 style="margin:0; text-align:center;">✨聖杯強化 (Pt:<span id="holy2">0</span>)</h3>
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:2px; margin:8px 0;">
             <button id="amt1" onclick="setAmount(1)">x1</button>
             <button id="amt10" onclick="setAmount(10)">x10</button>
             <button id="amtMAX" onclick="setAmount('MAX')">MAX</button>
         </div>
         <div class="up-grid">
-            <button class="up-btn" onclick="upgrade('atk')">攻撃<span>+<span id="b-atk">0</span></span></button>
-            <button class="up-btn" onclick="upgrade('def')">防御<span>+<span id="b-def">0</span></span></button>
-            <button class="up-btn" onclick="upgrade('hp')">最大HP<span>+<span id="b-hp">0</span></span></button>
-            <button class="up-btn" onclick="upgrade('exp')">経験値<span>+<span id="b-exp">0</span></span></button>
+            <button class="up-btn" onclick="upgrade('atk')">攻撃 <span>+<span id="b-atk">0</span></span></button>
+            <button class="up-btn" onclick="upgrade('def')">防御 <span>+<span id="b-def">0</span></span></button>
+            <button class="up-btn" onclick="upgrade('hp')">命 <span>+<span id="b-hp">0</span></span></button>
+            <button class="up-btn" onclick="upgrade('exp')">経 <span>+<span id="b-exp">0</span></span></button>
         </div>
-        <button id="autoUpBtn" style="width:100%; padding:8px;" onclick="toggleAutoUpgrade()">自動強化: OFF</button>
+        <button id="autoUpBtn" style="width:100%" onclick="toggleAutoUpgrade()">自動強化: OFF</button>
+        <button onclick="closeModal('upgradeModal')" style="width:100%; margin-top:8px; background:#c0392b;">閉じる</button>
     </div>
 </div>
 
 <div id="casinoModal" class="modal">
     <div class="modal-content" style="text-align:center;">
-        <span class="modal-close" onclick="closeModal('casinoModal')">&times;</span>
         <h3 style="margin:0; color:var(--accent);">聖杯カジノ</h3>
-        <div id="slot" style="font-size:32px; margin:15px 0; background:#000; border-radius:5px;">❓ ❓ ❓</div>
-        <div id="casinoResult" style="min-height:1.2em; font-size:12px; color:var(--accent);"></div>
-        <button onclick="playCasino()" id="spinBtn" style="width:100%; padding:10px; background:#27ae60; font-weight:bold; margin-bottom:5px;">スピン！ (1Pt)</button>
+        <div id="slot" style="font-size:30px; margin:10px 0; background:#000; border-radius:4px;">❓ ❓ ❓</div>
+        <div id="casinoResult" style="min-height:1.2em; font-size:11px; color:var(--accent);"></div>
+        <button onclick="playCasino()" id="spinBtn" style="width:100%; padding:8px; background:#27ae60; font-weight:bold;">スピン(1Pt)</button>
+        <button onclick="closeModal('casinoModal')" style="width:100%; margin-top:8px; background:#c0392b;">閉じる</button>
     </div>
 </div>
 
 <script>
-const SAVE_KEY = "HolyRPG_Persistent_Data_v2.5";
-let floor=1, maxReachedFloor=1, loopCount=0, kills=0, holy=0, petLv=1;
-let bonus={atk:0, def:0, hp:0, exp:0}, buyAmount=1, autoIsOn=false, autoUpgrade=false, heroUnlocked=false;
+const SAVE_KEY = "HolyRPG_Fix_v2.6";
+let floor=1, maxReachedFloor=1, kills=0, holy=0, petLv=1;
+let bonus={atk:0, def:0, hp:0, exp:0}, buyAmount=1, autoIsOn=false, autoUpgrade=false;
 let party=[], enemy=null;
 
 const JOB_DATA = {
-    "せんし": {h:150, a:12, d:12, s:"強撃 (ダメージ1.5倍)"},
-    "とうぞく": {h:100, a:11, d:6, s:"急所突き (ダメージ2倍)"},
-    "まほうつかい": {h:80, a:22, d:4, s:"メテオ (全体特大ダメージ)"},
-    "そうりょ": {h:120, a:8, d:8, s:"ヒール (HPを小回復)"},
-    "勇者": {h:250, a:35, d:20, s:"ギガスラッシュ (超絶ダメージ)"}
+    "せんし": {h:150, a:14, d:14, skills:["強撃","兜割り","シールドバッシュ"]},
+    "とうぞく": {h:100, a:12, d:8, skills:["急所突き","影縫い","不意打ち"]},
+    "まほうつかい": {h:85, a:25, d:5, skills:["メテオ","ブリザード","サンダーボルト"]},
+    "そうりょ": {h:125, a:10, d:10, skills:["ヒール","リジェネ","バリア"]},
+    "勇者": {h:280, a:40, d:25, skills:["ギガスラッシュ","天罰","覇王斬"]}
 };
 
 class Character {
@@ -145,11 +131,11 @@ class Character {
         this.weapon={name:"木の棒",val:0}; this.armor={name:"布の服",val:0};
     }
     updateStats() {
-        const j = JOB_DATA[this.job]||JOB_DATA["せんし"];
-        const awake = 1 + Math.floor(this.level/10)*0.15;
-        this.maxHp = Math.floor((j.h + (bonus.hp||0) + (this.level-1)*45) * awake);
-        this.atk = Math.floor((j.a + (bonus.atk||0) + (this.level-1)*7 + this.weapon.val) * awake);
-        this.def = Math.floor((j.d + (bonus.def||0) + (this.level-1)*5 + this.armor.val) * awake);
+        const j = JOB_DATA[this.job];
+        const awake = 1 + Math.floor(this.level/10)*0.1;
+        this.maxHp = Math.floor((j.h + bonus.hp + (this.level-1)*40) * awake);
+        this.atk = Math.floor((j.a + bonus.atk + (this.level-1)*6 + this.weapon.val) * awake);
+        this.def = Math.floor((j.d + bonus.def + (this.level-1)*4 + this.armor.val) * awake);
         if(this.hp > this.maxHp) this.hp = this.maxHp;
     }
 }
@@ -160,11 +146,17 @@ function closeModal(id) { document.getElementById(id).style.display = "none"; }
 function showCharDetail(idx) {
     const c = party[idx];
     const j = JOB_DATA[c.job];
-    document.getElementById("m-name").innerHTML = `${c.icon} ${c.name} <span class="job-tag">${c.job}</span>`;
-    document.getElementById("m-status").innerHTML = `Lv: ${c.level}<br>HP: ${Math.floor(c.hp)} / ${c.maxHp}<br>攻撃力: ${c.atk}<br>防御力: ${c.def}`;
-    document.getElementById("m-skill").innerHTML = `スキル: ${j.s}`;
-    document.getElementById("m-weapon").innerText = `${c.weapon.name} (+${c.weapon.val})`;
-    document.getElementById("m-armor").innerText = `${c.armor.name} (+${c.armor.val})`;
+    document.getElementById("m-content").innerHTML = `
+        <h3 style="margin:0">${c.icon} ${c.name} (${c.job})</h3>
+        <hr style="border:0; border-top:1px solid #555; margin:8px 0;">
+        <div style="font-size:12px;">Lv:${c.level} | HP:${Math.floor(c.hp)}/${c.maxHp}</div>
+        <div style="font-size:12px;">ATK:${c.atk} | DEF:${c.def}</div>
+        <div style="margin-top:8px; color:var(--accent);">所持スキル:<br>・${j.skills.join("<br>・")}</div>
+        <div style="margin-top:8px; padding:4px; background:rgba(0,0,0,0.2); border-radius:4px;">
+            ⚔️ ${c.weapon.name} +${c.weapon.val}<br>🛡️ ${c.armor.name} +${c.armor.val}
+        </div>
+        <button onclick="closeModal('charModal')" style="width:100%; margin-top:10px; background:#444;">閉じる</button>
+    `;
     openModal("charModal");
 }
 
@@ -190,15 +182,30 @@ function updateUI() {
 
     const pEl = document.getElementById("partyList");
     pEl.innerHTML = "";
-    party.forEach((c, idx) => {
+    party.forEach((c, i) => {
         c.updateStats();
-        const card = document.createElement("div");
-        card.className = "char-card " + (c.alive ? "" : "dead");
-        card.onclick = () => showCharDetail(idx);
-        card.innerHTML = `<div class="char-info"><span>${c.icon}${c.name} <small>Lv${c.level}</small></span><span>HP:${Math.floor(c.hp)}</span></div>
-        <div style="font-size:9px; color:#888;">${c.job} / ⚔️+${c.weapon.val} 🛡️+${c.armor.val}</div>`;
-        pEl.appendChild(card);
+        const row = document.createElement("div");
+        row.className = "char-row " + (c.alive ? "" : "dead");
+        row.onclick = () => showCharDetail(i);
+        row.innerHTML = `
+            <div style="display:flex; justify-content:space-between; font-weight:bold;">
+                <span>${c.icon}${c.name} Lv${c.level}</span>
+                <span>HP:${Math.floor(c.hp)}</span>
+            </div>
+            <div style="font-size:9px; color:#aaa;">${c.job} | ⚔️+${c.weapon.val} 🛡️+${c.armor.val}</div>
+        `;
+        pEl.appendChild(row);
     });
+}
+
+function stepDungeon() {
+    if(enemy) return;
+    const enemyList = ["スライム","ゴブリン","オーク","スケルトン","ドラゴン","リッチ","デビル"];
+    const eName = (floor % 10 === 0) ? "BOSS " + enemyList[Math.floor(Math.random()*enemyList.length)] : enemyList[Math.floor(Math.random()*enemyList.length)];
+    const p = (1 + floor/150);
+    enemy = { name: eName, maxHp:(250+floor*70)*p, hp:0, atk:(12+floor*8)*p, def:(10+floor*5)*p };
+    enemy.hp = enemy.maxHp;
+    battleLoop();
 }
 
 function battleLoop() {
@@ -206,31 +213,22 @@ function battleLoop() {
         if(!enemy) { clearInterval(it); return; }
         party.forEach(c => {
             if(!c.alive || !enemy || enemy.hp <= 0) return;
-            
-            // スキル判定
             let dmg = Math.max(1, c.atk - enemy.def);
-            if(Math.random() < 0.15) {
-                const s = { "せんし":"強撃", "とうぞく":"急所突き", "まほうつかい":"メテオ", "そうりょ":"ヒール", "勇者":"ギガスラッシュ" }[c.job];
-                if(c.job === "そうりょ") {
-                    c.hp = Math.min(c.maxHp, c.hp + c.atk);
-                    addLog(`🕊️${s}! HP回復`, "#2ecc71");
-                } else {
-                    let mult = (c.job === "勇者") ? 3 : 2;
-                    dmg *= mult;
-                    addLog(`${c.icon}${s}!`, "#3498db");
-                }
+            if(Math.random() < 0.2) {
+                const s = JOB_DATA[c.job].skills[Math.floor(Math.random()*3)];
+                if(c.job === "そうりょ") { c.hp = Math.min(c.maxHp, c.hp + c.atk); addLog(`🕊️${s}`, "#2ecc71"); }
+                else { dmg *= 2; addLog(`${c.icon}${s}`, "#3498db"); }
             }
             enemy.hp -= dmg;
-
             if(enemy.hp <= 0) {
                 enemy.hp = 0; clearInterval(it); kills++;
                 if(kills%10===0) { holy++; if(autoUpgrade) autoDistribute(); }
                 if(Math.random()<0.2) dropGear();
                 party.forEach(char => {
-                    char.exp += 20 * (1+bonus.exp*0.1);
-                    if(char.exp >= 50){ char.level++; char.exp=0; char.hp=char.maxHp; }
+                    char.exp += 25 * (1+bonus.exp*0.1);
+                    if(char.exp >= 100){ char.level++; char.exp=0; char.hp=char.maxHp; }
                 });
-                if(floor===100 && !heroUnlocked){ heroUnlocked=true; party[0].job="勇者"; party[0].icon="👑"; addLog("👑勇者が目覚めた！", "var(--accent)"); }
+                if(floor===100 && party[0].job!=="勇者") { party[0].job="勇者"; party[0].icon="👑"; addLog("👑勇者覚醒"); }
                 floor++; if(floor>maxReachedFloor) maxReachedFloor=floor;
                 enemy=null; save(); if(autoIsOn) setTimeout(stepDungeon, 50);
                 updateUI();
@@ -248,14 +246,14 @@ function battleLoop() {
     }, 50);
 }
 
-// 以下、ロジック（カジノ、強化、探索、セーブ、ロード）は共通ですが、UIに合わせて微調整
-function stepDungeon() {
-    if(enemy) return;
-    const p = (1 + floor/100);
-    enemy = { name: (floor%10===0?"BOSS":"MON"), maxHp:(200+floor*60)*p, hp:0, atk:(15+floor*7)*p, def:(10+floor*4)*p };
-    enemy.hp = enemy.maxHp;
-    battleLoop();
+function dropGear() {
+    const target = party[Math.floor(Math.random()*party.length)];
+    const isWep = Math.random() > 0.5;
+    const val = Math.floor(floor * 1.6);
+    if(isWep && val > target.weapon.val) { target.weapon = { name: "鋼の剣", val: val }; addLog(`🎁${target.name}武器UP`, "#f39c12"); }
+    else if(!isWep && val > target.armor.val) { target.armor = { name: "鋼の鎧", val: val }; addLog(`🎁${target.name}防具UP`, "#f39c12"); }
 }
+
 function toggleAuto() { autoIsOn = !autoIsOn; document.getElementById("mainAutoBtn").className = autoIsOn ? "toggleOn" : ""; if(autoIsOn) stepDungeon(); }
 function setAmount(a) { buyAmount = a; ["amt1", "amt10", "amtMAX"].forEach(id => document.getElementById(id).classList.toggle("active", id.includes(a))); }
 function upgrade(t) {
@@ -266,14 +264,6 @@ function upgrade(t) {
 function toggleAutoUpgrade() { autoUpgrade = !autoUpgrade; document.getElementById("autoUpBtn").className = autoUpgrade ? "toggleOn" : ""; }
 function autoDistribute() { upgrade(['atk','def','hp','exp'][Math.floor(Math.random()*4)]); }
 function warpMax() { if(!enemy){ floor = maxReachedFloor; updateUI(); }}
-
-function dropGear() {
-    const target = party[Math.floor(Math.random()*party.length)];
-    const isWep = Math.random() > 0.5;
-    const val = Math.floor(floor * 1.5);
-    if(isWep && val > target.weapon.val) { target.weapon = { name: "鋼の剣", val: val }; addLog(`🎁${target.name} 武器更新`, "#f39c12"); }
-    else if(!isWep && val > target.armor.val) { target.armor = { name: "鋼の鎧", val: val }; addLog(`🎁${target.name} 防具更新`, "#f39c12"); }
-}
 
 function playCasino() {
     if(holy < 1) return;
@@ -291,11 +281,11 @@ function playCasino() {
             else { bonus.atk += 10; document.getElementById("casinoResult").innerText = "攻撃力+10"; }
             spinBtn.disabled = false; updateUI(); save();
         }
-    }, 100);
+    }, 80);
 }
 
 function save() {
-    const data = { floor, maxReachedFloor, holy, bonus, petLv, heroUnlocked, party: party.map(c => ({
+    const data = { floor, maxReachedFloor, holy, bonus, petLv, party: party.map(c => ({
         name:c.name, job:c.job, icon:c.icon, level:c.level, hp:c.hp, weapon:c.weapon, armor:c.armor
     }))};
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
@@ -303,15 +293,18 @@ function save() {
 function load() {
     const saved = localStorage.getItem(SAVE_KEY);
     if(saved) {
-        const d = JSON.parse(saved);
-        floor=d.floor; maxReachedFloor=d.maxReachedFloor; holy=d.holy; bonus=d.bonus; petLv=d.petLv||1; heroUnlocked=d.heroUnlocked;
-        party = d.party.map(p => { 
-            let c=new Character(p.name, p.job, p.icon); c.level=p.level; c.hp=p.hp; 
-            c.weapon=p.weapon; c.armor=p.armor; return c; 
-        });
-    } else {
-        party = [new Character("レオン","せんし","⚔️"), new Character("ミラ","とうぞく","🗡️"), new Character("アーク","まほうつかい","🪄"), new Character("セラ","そうりょ","🕊️")];
-    }
+        try {
+            const d = JSON.parse(saved);
+            floor=d.floor||1; maxReachedFloor=d.maxReachedFloor||1; holy=d.holy||0; bonus=d.bonus||{atk:0,def:0,hp:0,exp:0};
+            party = d.party.map(p => { 
+                let c=new Character(p.name, p.job, p.icon); c.level=p.level; c.hp=p.hp; 
+                c.weapon=p.weapon; c.armor=p.armor; return c; 
+            });
+        } catch(e) { console.error(e); initParty(); }
+    } else { initParty(); }
+}
+function initParty() {
+    party = [new Character("レオン","せんし","⚔️"), new Character("ミラ","とうぞく","🗡️"), new Character("アーク","まほうつかい","🪄"), new Character("セラ","そうりょ","🕊️")];
 }
 load(); updateUI();
 </script>
