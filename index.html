@@ -2,173 +2,169 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>Job Master Tower v4.3.0</title>
+<title>Job Master Tower v4.4.0</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <style>
-:root { --bg: #050505; --panel: #111; --accent: #d4af37; --text: #ccc; --border: #222; --btn: #333; }
+:root { --bg: #050505; --panel: #111; --accent: #d4af37; --text: #ccc; --border: #222; }
 * { touch-action: manipulation; box-sizing: border-box; -webkit-user-select: none; }
 body { margin:0; background:var(--bg); color:var(--text); font-family: 'Consolas', monospace; height: 100dvh; display:flex; flex-direction:column; padding:8px; overflow:hidden; }
-button { background:var(--btn); color:#eee; border:1px solid #444; border-radius:4px; cursor:pointer; padding:10px; font-size:12px; }
-button:active { background: #555; }
+button { background:#222; color:#eee; border:1px solid #444; border-radius:4px; cursor:pointer; padding:10px; font-size:12px; }
+button:active { background: #444; }
 button:disabled { opacity: 0.1; }
 
-/* 敵UI */
-.tower-info { text-align: center; border: 1px solid #333; padding: 4px; margin-bottom: 4px; font-size: 12px; }
-.enemy-box { text-align: center; padding: 12px; border: 1px solid var(--border); background: #000; margin-bottom: 8px; }
-.hp-bar { width: 100%; background:#200; height:12px; border:1px solid #400; margin-top:6px; overflow:hidden; }
-.hp-fill { background:linear-gradient(90deg, #800, #f22); height:100%; width:100%; transition: width 0.2s; }
+.tower-header { display: flex; justify-content: space-between; align-items: center; background: #1a1a1a; border: 1px solid #333; padding: 6px; margin-bottom: 4px; }
+.enemy-box { text-align: center; padding: 10px; border: 1px solid var(--border); background: #000; margin-bottom: 6px; }
+.hp-bar { width: 100%; background:#200; height:10px; border:1px solid #400; margin-top:4px; }
+.hp-fill { background:#a00; height:100%; width:100%; transition: width 0.2s; }
 
-/* 戦闘ログ */
-.log-area { flex: 1; background:#000; border:1px solid var(--border); overflow-y:auto; padding:8px; font-size:11px; line-height:1.5; display:flex; flex-direction:column-reverse; margin-bottom:8px; }
+.log-area { flex: 1; background:#000; border:1px solid var(--border); overflow-y:auto; padding:8px; font-size:11px; line-height:1.5; display:flex; flex-direction:column-reverse; margin-bottom:6px; }
 
-/* アクションボタン */
 .battle-actions { display: flex; gap: 8px; margin-bottom: 8px; }
-#btnAttack { flex: 1; height: 60px; background: #400; border: 2px solid #822; font-weight: bold; font-size: 16px; }
+#btnAttack { flex: 1; height: 50px; background: #300; border: 1px solid #622; font-weight: bold; }
 
-/* フッターメニュー */
 .btn-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
 
-/* モーダル */
 .modal { display: none; position: fixed; inset:0; background:rgba(0,0,0,0.98); z-index:100; justify-content:center; align-items:center; }
 .modal-content { background:#111; border:1px solid #333; width:95%; height:92%; padding:15px; overflow-y:auto; }
-.list-row { border-bottom:1px solid #222; padding:12px 0; display:flex; justify-content:space-between; align-items:center; }
-.st-control { display:flex; align-items:center; gap:10px; }
-.st-btn { width:34px; height:34px; padding:0; font-size:18px; }
+.list-row { border-bottom:1px solid #222; padding:10px 0; display:flex; justify-content:space-between; align-items:center; }
 </style>
 </head>
 <body>
 
-<div class="tower-info">
-    <b style="color:var(--accent)">Trial Tower <span id="floor">1</span>F</b>
+<div class="tower-header">
+    <button onclick="changeFloor(-1)">◀</button>
+    <b style="color:var(--accent)">Tower: <span id="floor">1</span>F</b>
+    <button onclick="changeFloor(1)">▶</button>
 </div>
 
 <div class="enemy-box">
-    <div id="eName" style="font-size:16px; font-weight:bold;">---</div>
+    <div id="eName" style="font-weight:bold;">---</div>
     <div class="hp-bar"><div id="eHpFill" class="hp-fill"></div></div>
-    <div id="eHpNum" style="font-size:11px; margin-top:4px;">0 / 0</div>
+    <div id="eHpNum" style="font-size:10px;">0 / 0</div>
 </div>
 
 <div class="log-area" id="log"></div>
 
 <div class="battle-actions">
-    <button id="btnAttack">たたかう</button>
+    <button id="btnAttack">たたかう (長押し連打)</button>
 </div>
 
 <div class="btn-grid">
-    <button onclick="openM('statM')">📊 状態</button>
-    <button onclick="openM('jobM')">🛡️ 職種</button>
-    <button onclick="openM('skillM')">🎓 術法</button>
-    <button onclick="openM('equipM')">📦 道具</button>
+    <button onclick="openM('statM')">ステータス</button>
+    <button onclick="openM('jobM')">ジョブ</button>
+    <button onclick="openM('skillM')">スキル</button>
+    <button onclick="openM('equipM')">アイテム</button>
 </div>
 
 <div id="statM" class="modal"><div class="modal-content">
     <h3>📊 ステータス (PP:<span id="mPp">0</span>)</h3>
-    <div style="background:#000; padding:15px; border-radius:5px;">
-        <div class="list-row"><span>力 (ATK+3)</span><div class="st-control"><button class="st-btn" onclick="modST('atk',-1)">-</button><b id="stAtk">0</b><button class="st-btn" onclick="modST('atk',1)">+</button></div></div>
-        <div class="list-row"><span>守 (DEF+2)</span><div class="st-control"><button class="st-btn" onclick="modST('def',-1)">-</button><b id="stDef">0</b><button class="st-btn" onclick="modST('def',1)">+</button></div></div>
-        <div class="list-row"><span>命 (HP+50)</span><div class="st-control"><button class="st-btn" onclick="modST('hp',-1)">-</button><b id="stHp">0</b><button class="st-btn" onclick="modST('hp',1)">+</button></div></div>
-    </div>
-    <p style="font-size:11px; color:#888;">※PPはレベルアップで獲得。自由に振り直し可能です。</p>
-    <button onclick="closeM('statM')" style="width:100%">閉じる</button>
+    <div class="list-row"><span>Lv / HP</span> <span><b id="stLv">1</b> / <b id="stHp">100</b></span></div>
+    <div class="list-row"><span>力 (ATK)</span><div style="display:flex; align-items:center; gap:10px;"><button onclick="modST('atk',-1)">-</button><b id="stAtk">0</b><button onclick="modST('atk',1)">+</button></div></div>
+    <div class="list-row"><span>守 (DEF)</span><div style="display:flex; align-items:center; gap:10px;"><button onclick="modST('def',-1)">-</button><b id="stDef">0</b><button onclick="modST('def',1)">+</button></div></div>
+    <button onclick="closeM('statM')" style="width:100%; margin-top:20px;">閉じる</button>
 </div></div>
 
-<div id="jobM" class="modal"><div class="modal-content"><h3>🛡️ ジョブチェンジ</h3><div id="jobList"></div><br><button onclick="closeM('jobM')" style="width:100%">戻る</button></div></div>
+<div id="jobM" class="modal"><div class="modal-content"><h3>🛡️ ジョブ選択</h3><div id="jobList"></div><br><button onclick="closeM('jobM')" style="width:100%">戻る</button></div></div>
+
 <div id="skillM" class="modal"><div class="modal-content"><h3>🎓 <span id="curJobTitle"></span> スキル (SP:<span id="mSp">0</span>)</h3><div id="sList"></div><br><button onclick="closeM('skillM')" style="width:100%">戻る</button></div></div>
-<div id="equipM" class="modal"><div class="modal-content"><h3>📦 所持アイテム</h3><div id="iList"></div><br><h3>✨ アーティファクト</h3><div id="aList"></div><br><button onclick="closeM('equipM')" style="width:100%">戻る</button></div></div>
+
+<div id="equipM" class="modal"><div class="modal-content"><h3>📦 アイテム</h3><div id="iList"></div><br><button onclick="closeM('equipM')" style="width:100%">戻る</button></div></div>
 
 <script>
-const SAVE_KEY = "Slayer_v4.3.0";
-let floor=1, sp=0, pp=0, inBattle=false;
-let st = { atk:0, def:0, hp:0 }; 
-let hero = { lv:1, exp:0, hp:200, maxHp:200, job:'hero', eq:{w:null, a:null, r:null} };
-let inventory = [], artifacts = [], skills = {};
+const SAVE_KEY = "Slayer_v4.4.0";
+let floor=1, maxFloor=1, sp=0, pp=0, inBattle=false;
+let st = { atk:10, def:10, hp:200 }; 
+let hero = { lv:1, exp:0, job:'warrior', eq:{w:null, a:null} };
+let inventory = [], skills = {};
 
 const JOBS = {
-    hero:{n:"勇者"}, paladin:{n:"聖騎士"}, berserker:{n:"狂戦士"}, ninja:{n:"忍者"}, 
-    dragoon:{n:"竜騎士"}, sage:{n:"賢者"}, assassin:{n:"暗殺者"}, samurai:{n:"侍"},
-    monk:{n:"モンク"}, hunter:{n:"狩人"}, bard:{n:"吟遊詩人"}, lich:{n:"死霊術師"}
+    warrior: { n: "戦士", s: [
+        {id:"w1", n:"強撃", type:"A", d:"15%でダメージ1.5倍", max:10},
+        {id:"w2", n:"重装歩兵", type:"P", d:"DEF +5", max:10, eff:{def:5}},
+        {id:"w3", n:"一閃", type:"A", d:"10%でダメージ2.0倍", max:10},
+        {id:"w4", n:"逆鱗", type:"P", d:"ATK +5", max:10, eff:{atk:5}},
+        {id:"w5", n:"不撓不屈", type:"P", d:"最大HP +50", max:10, eff:{hp:50}}
+    ]},
+    thief: { n: "盗賊", s: [
+        {id:"t1", n:"急所狙い", type:"A", d:"10%で会心撃", max:10},
+        {id:"t2", n:"軽業", type:"P", d:"回避率アップ", max:10},
+        {id:"t3", n:"目利き", type:"P", d:"EXP +10%", max:10, eff:{exp:0.1}},
+        {id:"t4", n:"奇襲", type:"A", d:"戦闘開始時ダメージ", max:10},
+        {id:"t5", n:"俊敏", type:"P", d:"ATK +3", max:10, eff:{atk:3}}
+    ]}
 };
 
-// 全ジョブにパッシブ5、アクティブ5を定義（サンプルとして一部詳細化）
-const JOB_SKILLS = {};
-Object.keys(JOBS).forEach(k => {
-    JOB_SKILLS[k] = [
-        {id:k+"_p1", n:"パッシブ I", type:"P", d:"ATK+5", max:10, eff:{atk:5}},
-        {id:k+"_p2", n:"パッシブ II", type:"P", d:"DEF+5", max:10, eff:{def:5}},
-        {id:k+"_p3", n:"パッシブ III", type:"P", d:"HP+100", max:10, eff:{hp:100}},
-        {id:k+"_p4", n:"パッシブ IV", type:"P", d:"CRIT+1%", max:10, eff:{crit:0.01}},
-        {id:k+"_p5", n:"パッシブ V", type:"P", d:"EXP+5%", max:10, eff:{exp:0.05}},
-        {id:k+"_a1", n:"アクティブ I", type:"A", d:"10%で2倍撃", max:10, eff:{mult:2, chance:0.1}},
-        {id:k+"_a2", n:"アクティブ II", type:"A", d:"5%で回復", max:10},
-        {id:k+"_a3", n:"アクティブ III", type:"A", d:"特殊効果", max:10},
-        {id:k+"_a4", n:"アクティブ IV", type:"A", d:"範囲攻撃", max:10},
-        {id:k+"_a5", n:"アクティブ V", type:"A", d:"奥義", max:10},
-    ];
-});
-
 function updateUI() {
-    let sA=0, sD=0, sH=0, sCr=0, sE=0;
+    let sA=0, sD=0, sH=0, sE=0;
     Object.keys(skills).forEach(j => {
-        Object.keys(skills[j]).forEach(sid => {
-            const s = JOB_SKILLS[j].find(x=>x.id===sid);
-            if(!s || s.type !== "P") return;
-            const lv = skills[j][sid];
-            if(s.eff.atk) sA += s.eff.atk * lv;
-            if(s.eff.def) sD += s.eff.def * lv;
-            if(s.eff.hp) sH += s.eff.hp * lv;
-            if(s.eff.crit) sCr += s.eff.crit * lv;
-            if(s.eff.exp) sE += s.eff.exp * lv;
+        JOBS[j].s.forEach(s => {
+            const lv = skills[j][s.id] || 0;
+            if(s.type === "P" && lv > 0) {
+                if(s.eff.atk) sA += s.eff.atk * lv;
+                if(s.eff.def) sD += s.eff.def * lv;
+                if(s.eff.hp) sH += s.eff.hp * lv;
+                if(s.eff.exp) sE += s.eff.exp * lv;
+            }
         });
     });
     
-    let eA=0, eD=0, eH=0;
-    ['w','a','r'].forEach(t => { if(hero.eq[t]) { eA += hero.eq[t].atk; eD += hero.eq[t].def; eH += hero.eq[t].hp; } });
+    let eA = hero.eq.w ? hero.eq.w.atk : 0;
+    let eD = hero.eq.a ? hero.eq.a.def : 0;
 
-    hero.maxHp = 200 + st.hp*50 + sH + eH;
-    hero.atk = 15 + st.atk*3 + sA + eA;
-    hero.def = 10 + st.def*2 + sD + eD;
-    hero.crit = sCr;
+    hero.maxHp = st.hp + sH;
+    hero.atk = st.atk + sA + eA;
+    hero.def = st.def + sD + eD;
     hero.expBonus = sE;
 
     document.getElementById("floor").innerText = floor;
+    document.getElementById("stLv").innerText = hero.lv;
+    document.getElementById("stHp").innerText = hero.maxHp;
     document.getElementById("stAtk").innerText = st.atk;
     document.getElementById("stDef").innerText = st.def;
-    document.getElementById("stHp").innerText = st.hp;
     document.getElementById("mPp").innerText = pp;
     document.getElementById("mSp").innerText = sp;
 }
 
 function modST(k, v) {
     if(v > 0 && pp > 0) { st[k]++; pp--; }
-    else if(v < 0 && st[k] > 0) { st[k]--; pp++; }
+    else if(v < 0 && st[k] > 1) { st[k]--; pp++; }
     updateUI(); save();
 }
 
-function addLog(msg, col="") {
-    const l = document.getElementById("log");
-    const d = document.createElement("div");
-    if(col) d.style.color = col;
-    d.innerText = `> ${msg}`;
-    l.prepend(d);
-    if(l.childNodes.length > 25) l.removeChild(l.lastChild);
+function changeFloor(v) {
+    let next = floor + v;
+    if(next < 1) next = 1;
+    if(next > maxFloor) next = maxFloor;
+    if(next !== floor) {
+        floor = next;
+        addLog(`${floor}Fへ移動しました。`);
+        inBattle = false;
+        nextBattle();
+    }
 }
 
-// 戦闘ロジック
+function generateEName(f) {
+    const pre = ["血に飢えた", "彷徨える", "邪悪な", "深淵の", "呪われた", "狂暴な"];
+    const mid = ["ゴブリン", "オーク", "スケルトン", "ウルフ", "リザード", "レイス"];
+    const seed = f % 6;
+    const seed2 = (f * 3) % 6;
+    return pre[seed] + mid[seed2] + (f % 50 === 0 ? "・ロード" : "");
+}
+
 let currentEnemy = null;
 function nextBattle() {
     if(inBattle) return;
     const isB = (floor % 50 === 0);
     const p = Math.pow(1.06, floor-1) * (isB ? 5 : 1);
     currentEnemy = {
-        name: isB ? `【BOSS】${floor}Fの守護者` : `魔物 Lv.${floor}`,
+        name: generateEName(floor),
         hp: Math.floor((100 + floor*20) * p),
-        atk: Math.floor((10 + floor*2) * p),
+        atk: Math.floor((8 + floor*2) * p),
     };
     currentEnemy.maxHp = currentEnemy.hp;
     document.getElementById("eName").innerText = currentEnemy.name;
     document.getElementById("eName").style.color = isB ? "#f22" : "#ccc";
-    inBattle = true;
-    updateEnemyUI();
+    inBattle = true; updateEnemyUI();
 }
 
 function updateEnemyUI() {
@@ -180,20 +176,20 @@ function updateEnemyUI() {
 function playerAttack() {
     if(!inBattle || !currentEnemy) return;
     let d = Math.max(1, hero.atk - currentEnemy.atk*0.05);
-    if(Math.random() < hero.crit) { d *= 2; addLog("会心！", "#d4af37"); }
     currentEnemy.hp -= d;
     updateEnemyUI();
-    if(currentEnemy.hp <= 0) win();
-}
-
-function win() {
-    addLog(`${currentEnemy.name} を撃破。`);
-    hero.exp += (30 + floor) * (1 + hero.expBonus);
-    if(hero.exp >= 100) { hero.lv++; hero.exp=0; sp++; pp++; addLog("LvUP!", "#3498db"); }
-    if(floor % 100 === 0) dropArtifact();
-    else if(Math.random() < 0.2) dropItem();
-    floor++; inBattle = false; save(); updateUI();
-    setTimeout(nextBattle, 600);
+    if(currentEnemy.hp <= 0) {
+        addLog(`${currentEnemy.name}を倒した。`);
+        hero.exp += (20 + floor) * (1 + hero.expBonus);
+        if(hero.exp >= 100) {
+            hero.lv++; hero.exp=0; sp++; pp++; st.hp += 10;
+            addLog(`LvUP! HP+10 PP+1 SP+1`, "#3498db");
+        }
+        if(Math.random() < 0.2 || floor % 50 === 0) dropItem();
+        if(floor === maxFloor) maxFloor++;
+        floor++; inBattle = false; save(); updateUI();
+        setTimeout(nextBattle, 500);
+    }
 }
 
 function enemyTurn() {
@@ -201,76 +197,79 @@ function enemyTurn() {
     hero.hp -= Math.max(1, currentEnemy.atk - hero.def);
     updateUI();
     if(hero.hp <= 0) {
-        addLog("敗北...", "#e74c3c");
+        addLog(`${floor}Fで力尽きた...`, "#e74c3c");
         hero.hp = hero.maxHp; inBattle = false;
         setTimeout(nextBattle, 1500);
     }
 }
 
-// ループ処理（オートは半分の速度：0.3秒間隔）
-setInterval(() => { if(inBattle) playerAttack(); }, 300);
-setInterval(() => { if(inBattle) enemyTurn(); }, 1000);
+function dropItem() {
+    const isW = Math.random() > 0.5;
+    const lv = Math.floor(floor/5) + 1;
+    const item = isW ? 
+        {id:Date.now(), n:`鋼の剣+${lv}`, type:'w', atk:lv*5, def:0} :
+        {id:Date.now(), n:`鋼の鎧+${lv}`, type:'a', atk:0, def:lv*4};
+    inventory.push(item);
+    addLog(`入手：${item.n}`, "#2ecc71");
+}
 
-// たたかうボタン（長押し対応）
+function addLog(msg, col="") {
+    const l = document.getElementById("log");
+    const d = document.createElement("div");
+    if(col) d.style.color = col;
+    d.innerText = `> ${msg}`;
+    l.prepend(d);
+    if(l.childNodes.length > 20) l.removeChild(l.lastChild);
+}
+
+// たたかうボタン
 const atkBtn = document.getElementById("btnAttack");
 let atkTimer;
-const startAtk = (e) => { e.preventDefault(); playerAttack(); atkTimer = setInterval(playerAttack, 100); };
+const startAtk = (e) => { e.preventDefault(); playerAttack(); atkTimer = setInterval(playerAttack, 120); };
 const endAtk = () => clearInterval(atkTimer);
-atkBtn.addEventListener("mousedown", startAtk);
-atkBtn.addEventListener("mouseup", endAtk);
-atkBtn.addEventListener("touchstart", startAtk);
-atkBtn.addEventListener("touchend", endAtk);
+atkBtn.addEventListener("mousedown", startAtk); atkBtn.addEventListener("mouseup", endAtk);
+atkBtn.addEventListener("touchstart", startAtk); atkBtn.addEventListener("touchend", endAtk);
 
-function dropItem() {
-    const lv = Math.floor(floor/10)+1;
-    const item = { id:Date.now(), name:`階層の剣+${lv}`, type:'w', atk:lv*10, def:0, hp:0 };
-    inventory.push(item);
-    addLog(`拾：${item.name}`, "#2ecc71");
-}
-
-function dropArtifact() {
-    const art = { name: "古の宝玉", d: "全能力+5%" };
-    artifacts.push(art);
-    addLog(`★アーティファクト入手：${art.name}`, "#d4af37");
-}
+// オート進行
+setInterval(() => { if(inBattle) playerAttack(); }, 600);
+setInterval(() => { if(inBattle) enemyTurn(); }, 1200);
 
 function openM(id) {
     document.getElementById(id).style.display = "flex";
-    const d = document.getElementById(id==='jobM'?'jobList':id==='skillM'?'sList':id==='statM'?'':'iList');
+    const d = document.getElementById(id==='jobM'?'jobList':id==='skillM'?'sList':'iList');
     if(!d) return;
     d.innerHTML = "";
     if(id==='jobM') Object.keys(JOBS).forEach(k => {
-        d.innerHTML += `<div class="list-row"><b>${JOBS[k].n}</b><button onclick="changeJob('${k}')" ${hero.job===k?'disabled':''}>チェンジ</button></div>`;
+        d.innerHTML += `<div class="list-row"><b>${JOBS[k].n}</b><button onclick="changeJob('${k}')">チェンジ</button></div>`;
     });
     if(id==='skillM') {
         document.getElementById("curJobTitle").innerText = JOBS[hero.job].n;
-        JOB_SKILLS[hero.job].forEach(s => {
+        JOBS[hero.job].s.forEach(s => {
             if(!skills[hero.job]) skills[hero.job] = {};
             const lv = skills[hero.job][s.id] || 0;
-            d.innerHTML += `<div class="list-row"><div><b>[${s.type}] ${s.n} Lv.${lv}</b><br><small>${s.d}</small></div>
+            d.innerHTML += `<div class="list-row"><div><b>${s.n} Lv.${lv}</b><br><small>${s.d}</small></div>
                 <button onclick="buyS('${s.id}')" ${lv>=s.max||sp<1?'disabled':''}>強化</button></div>`;
         });
     }
     if(id==='equipM') {
         inventory.forEach(i => {
-            const isEq = Object.values(hero.eq).some(e => e && e.id === i.id);
-            d.innerHTML += `<div class="list-row"><b>${i.name}</b><div><button onclick="eqI(${i.id})" ${isEq?'disabled':''}>装備</button><button onclick="sellI(${i.id})">廃棄</button></div></div>`;
+            const isEq = hero.eq.w?.id === i.id || hero.eq.a?.id === i.id;
+            d.innerHTML += `<div class="list-row"><div><b>${i.n}</b><br><small>${i.atk?`ATK+${i.atk}`:`DEF+${i.def}`}</small></div>
+                <div><button onclick="eqI(${i.id})" ${isEq?'disabled':''}>装備</button><button onclick="sellI(${i.id})">廃棄</button></div></div>`;
         });
-        const al = document.getElementById("aList"); al.innerHTML = "";
-        artifacts.forEach(a => { al.innerHTML += `<div class="list-row"><b>${a.name}</b><small>${a.d}</small></div>`; });
     }
 }
 
-function changeJob(k) { hero.job = k; updateUI(); save(); openM('jobM'); addLog(`${JOBS[k].n}に就いた。`); }
+function changeJob(k) { hero.job = k; updateUI(); save(); openM('jobM'); addLog(`${JOBS[k].n}にジョブチェンジした。`); }
 function buyS(id) { if(sp>=1){ sp--; skills[hero.job][id] = (skills[hero.job][id]||0)+1; updateUI(); save(); openM('skillM'); } }
 function eqI(id) { const i = inventory.find(x=>x.id===id); hero.eq[i.type]=i; updateUI(); save(); openM('equipM'); }
-function sellI(id) { inventory = inventory.filter(x=>x.id!==id); Object.keys(hero.eq).forEach(k=>{if(hero.eq[k]&&hero.eq[k].id===id)hero.eq[k]=null;}); updateUI(); save(); openM('equipM'); }
+function sellI(id) { inventory = inventory.filter(x=>x.id!==id); if(hero.eq.w?.id===id)hero.eq.w=null; if(hero.eq.a?.id===id)hero.eq.a=null; updateUI(); save(); openM('equipM'); }
 function closeM(id) { document.getElementById(id).style.display = "none"; }
 
-function save() { localStorage.setItem(SAVE_KEY, JSON.stringify({ hero, st, skills, inventory, artifacts, floor, sp, pp })); }
+function save() { localStorage.setItem(SAVE_KEY, JSON.stringify({ hero, st, skills, inventory, floor, maxFloor, sp, pp })); }
 function load() {
     const s = localStorage.getItem(SAVE_KEY);
-    if(s) { const d = JSON.parse(s); hero=d.hero; st=d.st; skills=d.skills; inventory=d.inventory; artifacts=d.artifacts||[]; floor=d.floor; sp=d.sp; pp=d.pp; }
+    if(s) { const d = JSON.parse(s); hero=d.hero; st=d.st; skills=d.skills; inventory=d.inventory; floor=d.floor; maxFloor=d.maxFloor; sp=d.sp; pp=d.pp; }
     hero.hp = hero.maxHp;
 }
 load(); updateUI(); nextBattle();
