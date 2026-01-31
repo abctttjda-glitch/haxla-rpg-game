@@ -2,60 +2,71 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>聖杯オートRPG v2.8.0</title>
+<title>聖杯オートRPG v3.0.0</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <style>
 :root { --main-bg: #111; --panel-bg: #1e1e1e; --accent: #f1c40f; --text: #eee; --btn-bg: #333; }
 * { touch-action: manipulation; box-sizing: border-box; -webkit-user-select: none; }
-body { 
-    margin:0; background:var(--main-bg); color:var(--text); font-family:sans-serif; font-size:12px; padding:4px;
-    height: 100dvh; overflow:hidden; display:flex; flex-direction:column;
-}
+body { margin:0; background:var(--main-bg); color:var(--text); font-family:sans-serif; font-size:12px; padding:4px; height: 100dvh; overflow:hidden; display:flex; flex-direction:column; }
 .panel { background:var(--panel-bg); border:1px solid #444; border-radius:6px; padding:4px; margin-bottom:4px; }
 button { background:var(--btn-bg); color:#eee; border:1px solid #555; border-radius:4px; cursor:pointer; font-weight:bold; }
+button:active { opacity: 0.7; }
 .active { background:var(--accent) !important; color:#000 !important; }
 .toggleOn { background:#2ecc71 !important; color:#000 !important; }
 
-.header { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; height: 45px; }
+/* ヘッダー */
+.header { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; height: 46px; }
 .top-right { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
 
+/* 戦闘・敵 */
 .enemy-box { display: flex; align-items: center; gap: 5px; height: 22px; margin-bottom: 4px; }
 .hp-bar-outer { flex-grow: 1; background:#333; height:12px; border-radius:6px; overflow:hidden; position:relative; border:1px solid #555; }
 .hp-bar-inner { background:#e74c3c; height:100%; width:0%; transition: width 0.1s; }
 .hp-text { position:absolute; width:100%; text-align:center; font-size:9px; top:0; line-height:10px; font-weight:bold; }
 
+/* メイングリッド（デッドスペース削除） */
 .main-content { display: flex; flex: 1; min-height: 0; gap: 4px; margin-bottom: 4px; }
-.party-list { flex: 1.4; overflow-y: auto; }
-.log { flex: 1; background:#000; padding:2px; overflow-y:auto; display:flex; flex-direction:column-reverse; font-size: 9px; border-radius: 4px; border: 1px solid #333; line-height: 1.2; }
+.party-list { flex: 1.2; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+.log { flex: 1; background:#000; padding:4px; overflow-y:auto; display:flex; flex-direction:column-reverse; font-size: 10px; border-radius: 4px; border: 1px solid #333; line-height: 1.3; }
 
-.char-card { border-bottom: 1px solid #333; padding: 4px 0; cursor: pointer; }
+.char-card { border-bottom: 1px solid #444; padding: 4px 2px; cursor: pointer; background: rgba(255,255,255,0.02); }
 .char-head { display: flex; justify-content: space-between; font-weight: bold; font-size: 11px; }
-.job-label { color: var(--accent); font-size: 9px; background: rgba(241,196,15,0.1); padding: 0 2px; border-radius: 2px; }
 
+/* フッター */
 .footer { height: 50px; display: grid; grid-template-columns: 1fr 2fr; gap: 4px; }
 .footer button { font-size: 16px; }
 
+/* モーダル */
 .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:100; justify-content:center; align-items:center; }
 .modal-content { background:#2c3e50; border:2px solid #555; border-radius:10px; width:90%; max-width:320px; padding:15px; }
-.skill-item { background: rgba(0,0,0,0.2); margin: 4px 0; padding: 4px; border-radius:4px; cursor: help; }
+
+/* 振り直しUI */
+.up-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; background: rgba(0,0,0,0.2); padding: 5px; border-radius: 4px; }
+.up-row span { min-width: 60px; font-weight: bold; }
+.up-row-btns { display: flex; gap: 4px; }
+.up-row-btns button { width: 32px; height: 32px; }
+
+/* ガチャUI */
+.gacha-box { text-align: center; padding: 20px 0; background: #1a1a1a; border-radius: 8px; margin: 10px 0; border: 1px gold solid; }
+.gacha-item { font-size: 24px; min-height: 40px; }
 </style>
 </head>
 <body>
 
 <div class="header">
-    <div class="panel" onclick="openPetInfo()" style="cursor:help;">
+    <div class="panel" onclick="openPetInfo()">
         <strong><span id="floor">1</span>F</strong> <small>(<span id="holy">0</span>Pt)</small>
-        <div style="font-size:9px; color:#a29bfe;">🐾Lv<span id="petLv">1</span> <span id="killCount">0/10</span> (詳細)</div>
+        <div style="font-size:9px; color:#a29bfe;">🐾Lv<span id="petLv">1</span> 🚩<span id="killCount">0/10</span></div>
     </div>
     <div class="top-right">
         <button onclick="openModal('upgradeModal')">✨強化</button>
-        <button onclick="openModal('casinoModal')">🎰ｶｼﾞﾉ</button>
+        <button onclick="openModal('gachaModal')">🎁ガチャ</button>
         <button onclick="warpMax()" style="grid-column: span 2; font-size:10px;">Warp Max</button>
     </div>
 </div>
 
 <div class="panel enemy-box">
-    <div id="enemyName" style="font-size:10px; min-width:65px; font-weight:bold; overflow:hidden;">---</div>
+    <div id="enemyName" style="font-size:10px; min-width:70px; font-weight:bold;">---</div>
     <div class="hp-bar-outer">
         <div id="enemyHpBar" class="hp-bar-inner"></div>
         <div id="enemyHpNum" class="hp-text">0/0</div>
@@ -77,45 +88,41 @@ button { background:var(--btn-bg); color:#eee; border:1px solid #555; border-rad
 
 <div id="upgradeModal" class="modal">
     <div class="modal-content">
-        <h3 style="margin:0; text-align:center;">✨聖杯強化 (Pt:<span id="holy2">0</span>)</h3>
-        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:4px; margin:10px 0;">
-            <button id="amt1" onclick="setAmount(1)">x1</button>
-            <button id="amt10" onclick="setAmount(10)">x10</button>
-            <button id="amtMAX" onclick="setAmount('MAX')">MAX</button>
-        </div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:10px;">
-            <button onclick="upgrade('atk')">攻撃 +<span id="b-atk">0</span></button>
-            <button onclick="upgrade('def')">防御 +<span id="b-def">0</span></button>
-            <button onclick="upgrade('hp')">最大HP +<span id="b-hp">0</span></button>
-            <button onclick="upgrade('exp')">経験値 +<span id="b-exp">0</span></button>
-        </div>
-        <button id="autoUpBtn" style="width:100%; padding:10px;" onclick="toggleAutoUpgrade()">自動強化: OFF</button>
-        <button onclick="closeModal('upgradeModal')" style="width:100%; margin-top:10px; background:#c0392b;">閉じる</button>
+        <h3 style="margin:0; text-align:center;">✨ 聖杯の加護 (Pt:<span id="holy2">0</span>)</h3>
+        <p style="font-size:10px; color:#ccc; text-align:center;">振り直しはいつでも自由です</p>
+        <div id="upgradeRows"></div>
+        <button id="autoUpBtn" style="width:100%; padding:10px; margin-top:5px;" onclick="toggleAutoUpgrade()">自動強化: OFF</button>
+        <button onclick="closeModal('upgradeModal')" style="width:100%; margin-top:10px; background:#444;">閉じる</button>
     </div>
 </div>
 
-<div id="casinoModal" class="modal">
+<div id="gachaModal" class="modal">
     <div class="modal-content" style="text-align:center;">
-        <h3 style="margin:0; color:var(--accent);">聖杯カジノ</h3>
-        <div id="slot" style="font-size:32px; margin:15px 0; background:#000; border-radius:8px; padding:10px;">❓ ❓ ❓</div>
-        <div id="casinoResult" style="min-height:1.2em; font-weight:bold; color:var(--accent); margin-bottom:10px;"></div>
-        <button onclick="playCasino()" id="spinBtn" style="width:100%; padding:12px; background:#27ae60;">スピン (1Pt)</button>
-        <button onclick="closeModal('casinoModal')" style="width:100%; margin-top:10px; background:#c0392b;">閉じる</button>
+        <h3 style="margin:0; color:var(--accent);">🎁 聖杯ガチャ 🎁</h3>
+        <div class="gacha-box">
+            <div id="gachaItem" class="gacha-item">？</div>
+            <div id="gachaMsg" style="font-size:11px; margin-top:5px; color:#aaa;">何が出るかな？</div>
+        </div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px;">
+            <button onclick="playGacha(1)" style="padding:12px 0;">1連 (1Pt)</button>
+            <button onclick="playGacha(10)" style="padding:12px 0; background:#8e44ad;">10連 (10Pt)</button>
+        </div>
+        <button onclick="closeModal('gachaModal')" style="width:100%; margin-top:10px; background:#444;">閉じる</button>
     </div>
 </div>
 
 <script>
-const SAVE_KEY = "HolyRPG_Balance_v2.8";
+const SAVE_KEY = "HolyRPG_Stable_v3.0.0";
 let floor=1, maxReachedFloor=1, kills=0, totalKills=0, holy=0, petLv=1;
-let bonus={atk:0, def:0, hp:0, exp:0}, buyAmount=1, autoIsOn=false, autoUpgrade=false;
+let bonus={atk:0, def:0, hp:0, exp:0}, autoIsOn=false, autoUpgrade=false;
 let party=[], enemy=null;
 
 const JOB_DATA = {
-    "せんし": {h:180, a:16, d:16, active:"強撃", pass:"不屈の心", descA:"1.5倍ダメージ", descP:"HPが30%増加"},
-    "とうぞく": {h:120, a:14, d:10, active:"急所突き", pass:"精密動作", descA:"2.5倍ダメージ", descP:"攻撃力が20%増加"},
-    "まほうつかい": {h:100, a:30, d:7, active:"メテオ", pass:"魔力循環", descA:"全体大ダメージ", descP:"攻撃力が40%増加"},
-    "そうりょ": {h:140, a:12, d:12, active:"ヒール", pass:"祈り", descA:"味方のHPを回復", descP:"防御力が30%増加"},
-    "勇者": {h:350, a:50, d:35, active:"覇王斬", pass:"聖杯の加護", descA:"3.5倍ダメージ", descP:"全ステータス大幅増"}
+    "せんし": {h:200, a:18, d:18, s:[{lv:1,n:"強撃"},{lv:10,n:"兜割り"},{lv:25,n:"不屈の咆哮"}]},
+    "とうぞく": {h:130, a:16, d:12, s:[{lv:1,n:"急所突き"},{lv:10,n:"毒刃"},{lv:25,n:"神速の盗み"}]},
+    "まほうつかい": {h:110, a:32, d:8, s:[{lv:1,n:"火炎球"},{lv:10,n:"雷撃"},{lv:25,n:"メテオ"}]},
+    "そうりょ": {h:150, a:14, d:14, s:[{lv:1,n:"ヒール"},{lv:10,n:"聖なる壁"},{lv:25,n:"神の福音"}]},
+    "勇者": {h:400, a:60, d:40, s:[{lv:1,n:"覇王斬"},{lv:20,n:"天罰"},{lv:50,n:"終焉の光"}]}
 };
 
 class Character {
@@ -127,58 +134,12 @@ class Character {
     }
     updateStats() {
         const j = JOB_DATA[this.job];
-        // インフレ抑制: 指数関数的増加を避け、レベル係数をマイルドに
-        const lvBonus = 1 + (this.level - 1) * 0.08; 
-        const passMult = (this.job === "せんし" ? 1.3 : 1.0); // パッシブ効果を反映
-        this.maxHp = Math.floor((j.h + bonus.hp + (this.level-1)*35) * lvBonus * (this.job==="せんし"?1.3:1));
-        this.atk = Math.floor((j.a + bonus.atk + (this.level-1)*5 + this.weapon.val) * lvBonus * (this.job==="とうぞく"?1.2:this.job==="まほうつかい"?1.4:1));
-        this.def = Math.floor((j.d + bonus.def + (this.level-1)*4 + this.armor.val) * lvBonus * (this.job==="そうりょ"?1.3:1));
+        const growth = 1 + (this.level - 1) * 0.06; 
+        this.maxHp = Math.floor((j.h + bonus.hp + (this.level-1)*30) * growth);
+        this.atk = Math.floor((j.a + bonus.atk + (this.level-1)*5 + this.weapon.val) * growth);
+        this.def = Math.floor((j.d + bonus.def + (this.level-1)*4 + this.armor.val) * growth);
         if(this.hp > this.maxHp) this.hp = this.maxHp;
     }
-}
-
-function openModal(id) { document.getElementById(id).style.display = "flex"; updateUI(); }
-function closeModal(id) { document.getElementById(id).style.display = "none"; }
-
-function showCharDetail(idx) {
-    const c = party[idx];
-    const j = JOB_DATA[c.job];
-    document.getElementById("m-content").innerHTML = `
-        <h3 style="margin:0">${c.icon} ${c.name} <span class="job-label">${c.job}</span></h3>
-        <hr style="border:0; border-top:1px solid #555; margin:8px 0;">
-        <p>Lv:${c.level} | ATK:${c.atk} | DEF:${c.def}</p>
-        <div class="skill-item" onclick="alert('【${j.active}】\\n効果: ${j.descA}')">
-            <strong>🔥アクティブ: ${j.active}</strong><br><small>(タップで詳細表示)</small>
-        </div>
-        <div class="skill-item" onclick="alert('【${j.pass}】\\n効果: ${j.descP}')">
-            <strong>🛡️パッシブ: ${j.pass}</strong><br><small>(タップで詳細表示)</small>
-        </div>
-        <div style="background:rgba(0,0,0,0.2); padding:5px; border-radius:4px; font-size:10px;">
-            ⚔️ ${c.weapon.name}(+${c.weapon.val}) / 🛡️ ${c.armor.name}(+${c.armor.val})
-        </div>
-        <button onclick="closeModal('charModal')" style="width:100%; margin-top:10px; padding:10px;">閉じる</button>
-    `;
-    openModal("charModal");
-}
-
-function openPetInfo() {
-    document.getElementById("pet-content").innerHTML = `
-        <h3 style="margin:0">🐾 旅の相棒（ペット）</h3>
-        <hr style="border:0; border-top:1px solid #555; margin:8px 0;">
-        <p>現在のLv: ${petLv}</p>
-        <p><strong>役割1: 追撃</strong><br>戦闘中に一定確率で敵に固定ダメージを与えます。Lvが高いほどダメージアップ！</p>
-        <p><strong>役割2: 聖杯の加護</strong><br>敵を50体倒すごとにペットのLvが上がり、探索が有利になります。</p>
-        <button onclick="closeModal('petModal')" style="width:100%; margin-top:10px; padding:10px;">なるほど</button>
-    `;
-    openModal("petModal");
-}
-
-function addLog(t, color="#eee") {
-    const lb = document.getElementById("log");
-    const line = document.createElement("div");
-    line.style.color = color; line.innerText = t;
-    lb.appendChild(line);
-    if(lb.childNodes.length > 20) lb.removeChild(lb.firstChild);
 }
 
 function updateUI() {
@@ -187,35 +148,95 @@ function updateUI() {
     document.getElementById("holy2").innerText = holy;
     document.getElementById("killCount").innerText = `${kills%10}/10`;
     document.getElementById("petLv").innerText = petLv;
-    document.getElementById("b-atk").innerText = bonus.atk;
-    document.getElementById("b-def").innerText = bonus.def;
-    document.getElementById("b-hp").innerText = bonus.hp;
-    document.getElementById("b-exp").innerText = bonus.exp;
-    document.getElementById("autoUpBtn").className = autoUpgrade ? "toggleOn" : "";
-    document.getElementById("autoUpBtn").innerText = `自動強化: ${autoUpgrade ? "ON" : "OFF"}`;
 
     const pList = document.getElementById("partyList");
     pList.innerHTML = "";
     party.forEach((c, i) => {
         c.updateStats();
         const div = document.createElement("div");
-        div.className = "char-card " + (c.alive ? "" : "dead");
+        div.className = "char-card";
         div.onclick = () => showCharDetail(i);
         div.innerHTML = `
             <div class="char-head"><span>${c.icon}${c.name} <small>Lv${c.level}</small></span><span>HP:${Math.floor(c.hp)}</span></div>
-            <div style="font-size:9px; color:#aaa;">${c.job} | ⚔️+${c.weapon.val} 🛡️+${c.armor.val}</div>
+            <div style="font-size:9px; color:#aaa;">${c.job} | ⚔️${c.weapon.val} 🛡️${c.armor.val}</div>
         `;
         pList.appendChild(div);
     });
+
+    const upRows = document.getElementById("upgradeRows");
+    upRows.innerHTML = "";
+    const stats = [{k:'atk',n:'攻撃力'},{k:'def',n:'防御力'},{k:'hp',n:'最大HP'},{k:'exp',n:'経験値'}];
+    stats.forEach(s => {
+        const row = document.createElement("div");
+        row.className = "up-row";
+        row.innerHTML = `<span>${s.n}: ${bonus[s.k]}</span>
+            <div class="up-row-btns">
+                <button onclick="changeBonus('${s.k}',-1)">-</button>
+                <button onclick="changeBonus('${s.k}',1)">+</button>
+                <button onclick="changeBonus('${s.k}',10)" style="width:45px;">+10</button>
+            </div>`;
+        upRows.appendChild(row);
+    });
+    document.getElementById("autoUpBtn").className = autoUpgrade ? "toggleOn" : "";
+    document.getElementById("autoUpBtn").innerText = `自動強化: ${autoUpgrade ? "ON" : "OFF"}`;
+}
+
+function changeBonus(key, val) {
+    if(val > 0) {
+        const cost = Math.min(val, holy);
+        bonus[key] += cost; holy -= cost;
+    } else {
+        const back = Math.min(Math.abs(val), bonus[key]);
+        bonus[key] -= back; holy += back;
+    }
+    updateUI(); save();
+}
+
+function playGacha(times) {
+    if(holy < times) { alert("Ptが足りません"); return; }
+    holy -= times;
+    const items = ["⚔️武器強化","🛡️防具強化","🍖全回復","🧪経験値"];
+    let lastItem = "";
+    for(let i=0; i<times; i++) {
+        const r = Math.random();
+        const target = party[Math.floor(Math.random()*party.length)];
+        if(r < 0.4) { target.weapon.val += 5; lastItem = "⚔️武器+5"; }
+        else if(r < 0.8) { target.armor.val += 5; lastItem = "🛡️防具+5"; }
+        else { target.level += 1; lastItem = "🧪レベル+1"; }
+    }
+    document.getElementById("gachaItem").innerText = times === 1 ? lastItem : "10連結果：強化完了！";
+    document.getElementById("gachaMsg").innerText = "ガチャを回しました！";
+    addLog(`🎁ガチャでパーティを強化しました`);
+    updateUI(); save();
+}
+
+function showCharDetail(idx) {
+    const c = party[idx];
+    const skills = JOB_DATA[c.job].s.filter(s => c.level >= s.lv);
+    document.getElementById("m-content").innerHTML = `
+        <h3 style="margin:0">${c.icon}${c.name} (${c.job})</h3>
+        <p>Lv:${c.level} | ATK:${c.atk} | DEF:${c.def}</p>
+        <strong>習得スキル:</strong>
+        <div style="font-size:11px; color:var(--accent); margin:5px 0;">${skills.map(s=>"・"+s.n).join("<br>")}</div>
+        <button onclick="closeModal('charModal')" style="width:100%; margin-top:10px; padding:10px;">閉じる</button>
+    `;
+    openModal("charModal");
+}
+
+function addLog(t, color="#eee") {
+    const lb = document.getElementById("log");
+    const line = document.createElement("div");
+    line.style.color = color; line.innerText = t;
+    lb.appendChild(line);
+    if(lb.childNodes.length > 25) lb.removeChild(lb.firstChild);
 }
 
 function stepDungeon() {
     if(enemy) return;
-    const mons = ["スライム","ゴブリン","オーク","コボルト","ミイラ","ガーゴイル","デーモン"];
-    const name = (floor%10===0?"BOSS ":"") + mons[Math.min(mons.length-1, Math.floor(floor/25))];
-    // 敵のインフレ調整: 係数を1.08に下げ、体力の伸びをマイルドに
-    const power = Math.pow(1.08, Math.floor(floor/5));
-    enemy = { name: name, maxHp:(200+floor*50)*power, hp:0, atk:(10+floor*5)*power, def:(5+floor*3)*power };
+    const mons = ["スライム","ゴブリン","スケルトン","リザード","ドラゴン"];
+    const name = (floor%10===0?"BOSS ":"") + mons[Math.min(4, Math.floor(floor/20))];
+    const pow = Math.pow(1.06, Math.floor(floor/5));
+    enemy = { name: name, maxHp:(200+floor*50)*pow, hp:0, atk:(10+floor*6)*pow, def:(5+floor*4)*pow };
     enemy.hp = enemy.maxHp;
     battleLoop();
 }
@@ -226,35 +247,20 @@ function battleLoop() {
         party.forEach(c => {
             if(!c.alive || !enemy || enemy.hp <= 0) return;
             let dmg = Math.max(1, c.atk - enemy.def);
-            // アクティブスキル
-            if(Math.random() < 0.15) {
-                const s = JOB_DATA[c.job].active;
-                if(c.job === "そうりょ") { c.hp = Math.min(c.maxHp, c.hp + c.atk * 2); addLog(`🕊️${s}`, "#2ecc71"); }
-                else { 
-                    const mult = (c.job==="勇者"?3.5 : c.job==="とうぞく"?2.5 : 1.5);
-                    dmg *= mult; addLog(`${c.icon}${s}!`, "#3498db"); 
+            // スキル発動（Lvに応じた最新スキル）
+            if(Math.random() < 0.2) {
+                const s = JOB_DATA[c.job].s.filter(sk => c.level >= sk.lv).pop();
+                if(s) { 
+                    if(c.job === "そうりょ") { c.hp = Math.min(c.maxHp, c.hp + c.atk); addLog(`🕊️${s.n}`); }
+                    else { dmg *= 2; addLog(`${c.icon}${s.n}!`, "#3498db"); }
                 }
             }
-            // ペット追撃
-            if(Math.random() < 0.05) { enemy.hp -= (petLv * 20); addLog("🐾追撃!", "#a29bfe"); }
-            
             enemy.hp -= dmg;
             if(enemy.hp <= 0) {
-                enemy.hp = 0; clearInterval(it); 
-                kills++; totalKills++;
-                // 聖杯Pt獲得
-                if(kills % 10 === 0) { 
-                    holy++; 
-                    addLog("✨聖杯Pt獲得！", "#f1c40f");
-                    if(autoUpgrade) autoDistribute(); 
-                }
+                enemy.hp = 0; clearInterval(it); kills++; totalKills++;
+                if(kills % 10 === 0) { holy++; if(autoUpgrade) changeBonus('atk', 1); }
                 if(totalKills % 50 === 0) { petLv++; addLog("🐾ペットLvUP!"); }
-                if(Math.random()<0.2) dropGear();
-                
-                party.forEach(char => {
-                    char.exp += 25 * (1+bonus.exp*0.1);
-                    if(char.exp >= 100){ char.level++; char.exp=0; char.hp=char.maxHp; }
-                });
+                party.forEach(char => { char.exp += 30; if(char.exp>=100){ char.level++; char.exp=0; char.hp=char.maxHp; } });
                 floor++; if(floor>maxReachedFloor) maxReachedFloor=floor;
                 enemy=null; save(); if(autoIsOn) setTimeout(stepDungeon, 50);
                 updateUI();
@@ -269,67 +275,14 @@ function battleLoop() {
         document.getElementById("enemyHpNum").innerText = enemy ? `${Math.floor(enemy.hp)}` : "0";
         document.getElementById("enemyHpBar").style.width = enemy ? (enemy.hp/enemy.maxHp*100)+"%" : "0%";
         updateUI();
-    }, 60);
+    }, 70);
 }
 
-function dropGear() {
-    const target = party[Math.floor(Math.random()*party.length)];
-    const val = Math.floor(floor * 1.5);
-    if(Math.random()>0.5) { target.weapon.val = val; addLog(`🎁${target.name}武器UP`); }
-    else { target.armor.val = val; addLog(`🎁${target.name}防具UP`); }
-}
-
+function openModal(id) { document.getElementById(id).style.display = "flex"; }
+function closeModal(id) { document.getElementById(id).style.display = "none"; }
 function toggleAuto() { autoIsOn = !autoIsOn; document.getElementById("mainAutoBtn").className = autoIsOn ? "toggleOn" : ""; if(autoIsOn) stepDungeon(); }
-function setAmount(a) { buyAmount = a; ["amt1", "amt10", "amtMAX"].forEach(id => document.getElementById(id).classList.toggle("active", id.includes(a))); }
-
-function upgrade(t) {
-    let cost = (buyAmount === 'MAX') ? holy : buyAmount;
-    if(holy < cost || cost <= 0) return;
-    holy -= cost; 
-    const gain = (t==='hp'?cost*40:cost*4);
-    bonus[t] += gain; 
-    addLog(`✨${t.toUpperCase()}強化 +${gain}`, "#f1c40f");
-    updateUI(); save();
-}
-
-function toggleAutoUpgrade() { 
-    autoUpgrade = !autoUpgrade; 
-    updateUI();
-}
-
-function autoDistribute() { 
-    const stats = ['atk','def','hp','exp'];
-    const selected = stats[Math.floor(Math.random()*4)];
-    const cost = 1; 
-    if(holy >= cost) {
-        holy -= cost; 
-        const gain = (selected==='hp'?50:5);
-        bonus[selected] += gain;
-        addLog(`🤖自動強化: ${selected} +${gain}`, "#2ecc71");
-        updateUI();
-    }
-}
-
+function toggleAutoUpgrade() { autoUpgrade = !autoUpgrade; updateUI(); }
 function warpMax() { if(!enemy){ floor = maxReachedFloor; updateUI(); }}
-
-function playCasino() {
-    if(holy < 1) return;
-    holy--; updateUI();
-    const slot = document.getElementById("slot");
-    const spinBtn = document.getElementById("spinBtn");
-    spinBtn.disabled = true;
-    let timer = 0;
-    const interval = setInterval(() => {
-        const items = ["💎","⚔️","🍀","⭐","🍎"];
-        slot.innerText = items[Math.floor(Math.random()*5)] + " " + items[Math.floor(Math.random()*5)] + " " + items[Math.floor(Math.random()*5)];
-        if(++timer > 10) {
-            clearInterval(interval);
-            if(Math.random() < 0.1) { holy += 10; document.getElementById("casinoResult").innerText = "大当り！Pt+10"; }
-            else { bonus.atk += 10; document.getElementById("casinoResult").innerText = "攻撃力+10"; }
-            spinBtn.disabled = false; updateUI(); save();
-        }
-    }, 80);
-}
 
 function save() {
     const data = { floor, maxReachedFloor, holy, bonus, petLv, totalKills, autoUpgrade, party: party.map(c => ({
@@ -342,12 +295,11 @@ function load() {
     if(saved) {
         try {
             const d = JSON.parse(saved);
-            floor=d.floor||1; maxReachedFloor=d.maxReachedFloor||1; holy=d.holy||0; 
-            bonus=d.bonus||{atk:0,def:0,hp:0,exp:0}; petLv=d.petLv||1; totalKills=d.totalKills||0;
-            autoUpgrade=d.autoUpgrade||false;
+            floor=d.floor||1; maxReachedFloor=d.maxReachedFloor||1; holy=d.holy||0; bonus=d.bonus||{atk:0,def:0,hp:0,exp:0}; 
+            petLv=d.petLv||1; totalKills=d.totalKills||0; autoUpgrade=d.autoUpgrade||false;
             party = d.party.map(p => { 
                 let c=new Character(p.name, p.job, p.icon); c.level=p.level; c.hp=p.hp; 
-                c.weapon=p.weapon; c.armor=p.armor; return c; 
+                c.weapon=p.weapon||{name:"棒",val:0}; c.armor=p.armor||{name:"服",val:0}; return c; 
             });
         } catch(e) { initParty(); }
     } else { initParty(); }
