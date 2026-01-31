@@ -1,91 +1,170 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>簡易オートRPG</title>
+
+<style>
+body{
+  background:#111;
+  color:#eee;
+  font-family:sans-serif;
+  font-size:18px;
+  padding:10px;
+}
+
+h1{ font-size:26px; }
+h2{ font-size:22px; }
+
+button{
+  font-size:20px;
+  padding:10px 14px;
+  margin:6px 4px;
+}
+
+.panel{
+  background:#1a1a1a;
+  border:1px solid #444;
+  border-radius:6px;
+  padding:10px;
+  margin-bottom:12px;
+}
+
+.dead{
+  opacity:0.4;
+}
+
+.barWrap{
+  width:100%;
+  background:#333;
+  height:16px;
+  border-radius:8px;
+  overflow:hidden;
+}
+
+.bar{
+  height:100%;
+  background:#e74c3c;
+  width:100%;
+}
+</style>
+</head>
+
+<body>
+
+<h1>⚔ 簡易オートRPG</h1>
+
+<div class="panel">
+  距離：<span id="distance">0</span><br>
+  転生：<span id="rebirth">0</span>
+</div>
+
+<div class="panel">
+  <button onclick="stepDungeon()">進む</button>
+  <button onclick="toggleAuto()">オート</button>
+  <button onclick="setSpeed(2)">2倍</button>
+  <button onclick="setSpeed(4)">4倍</button>
+  <button onclick="setSpeed(8)">8倍</button>
+</div>
+
+<div class="panel">
+  <h2>敵</h2>
+  <div id="enemyText">---</div>
+  <div class="barWrap">
+    <div id="enemyHpBar" class="bar"></div>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>パーティ</h2>
+  <div id="party"></div>
+</div>
+
+<div class="panel">
+  <button onclick="rebirth()">転生</button>
+  <button onclick="resetGame()">リセット</button>
+</div>
+
 <script>
 /* ===== 武器 ===== */
 function generateWeapon(){
-  const r = Math.random();
-  let rarity = "N", mult = 1;
-
-  if(r > 0.98){ rarity="L"; mult=3; }
-  else if(r > 0.90){ rarity="E"; mult=2; }
-  else if(r > 0.70){ rarity="R"; mult=1.5; }
-
-  return {
-    rarity,
-    atk: Math.floor(5 * mult),
-    crit: 0.05 * mult
-  };
+  const r=Math.random();
+  let rarity="N", mult=1;
+  if(r>0.98){rarity="L";mult=3;}
+  else if(r>0.90){rarity="E";mult=2;}
+  else if(r>0.70){rarity="R";mult=1.5;}
+  return {rarity, atk:Math.floor(5*mult), crit:0.05*mult};
 }
 
 /* ===== キャラ ===== */
-class Character {
-  constructor() {
-    this.level = 1;
-    this.exp = 0;
-    this.maxHp = 100;
-    this.hp = this.maxHp;
-    this.atk = 10;
-    this.def = 5;
-    this.alive = true;
-    this.weapon = generateWeapon();
-    this.skill = Math.random() < 0.3 ? "連撃" : "強撃";
+class Character{
+  constructor(){
+    this.level=1;
+    this.exp=0;
+    this.maxHp=100;
+    this.hp=100;
+    this.atk=10;
+    this.def=5;
+    this.alive=true;
+    this.weapon=generateWeapon();
+    this.skill=Math.random()<0.3?"連撃":"強撃";
   }
 }
 
 /* ===== 敵 ===== */
-class Enemy {
-  constructor(dist) {
-    let mult = 1;
-    if(dist % 100 === 0) mult = 5;
-    else if(Math.random() < 0.2) mult = 2;
-
-    this.maxHp = Math.floor((50 + dist*0.5) * mult);
-    this.hp = this.maxHp;
-    this.atk = Math.floor((5 + dist*0.05) * mult);
-    this.def = Math.floor(dist*0.02 * mult);
+class Enemy{
+  constructor(dist){
+    let mult=1;
+    if(dist%100===0) mult=5;
+    else if(Math.random()<0.2) mult=2;
+    this.maxHp=Math.floor((50+dist*0.5)*mult);
+    this.hp=this.maxHp;
+    this.atk=Math.floor((5+dist*0.05)*mult);
+    this.def=Math.floor(dist*0.02*mult);
   }
 }
 
 /* ===== 状態 ===== */
-let distance = 0;
-let rebirthCount = 0;
-let speed = 1;
-let autoTimer = null;
-let currentEnemy = null;
-let party = Array.from({ length: 5 }, () => new Character());
+let distance=0;
+let rebirthCount=0;
+let speed=1;
+let autoTimer=null;
+let currentEnemy=null;
+let party=Array.from({length:5},()=>new Character());
 
 /* ===== 成長 ===== */
 function expToNextLevel(lv){
-  return Math.floor(20 * Math.pow(lv,1.6));
+  return Math.floor(20*Math.pow(lv,1.6));
 }
-function rand(min,max){
-  return Math.floor(Math.random()*(max-min+1))+min;
+function rand(a,b){
+  return Math.floor(Math.random()*(b-a+1))+a;
 }
 function levelUp(c){
   c.level++;
-  c.maxHp += rand(10,15);
-  c.atk += rand(2,4);
-  c.def += rand(1,2);
-  c.hp = c.maxHp;
+  c.maxHp+=rand(10,15);
+  c.atk+=rand(2,4);
+  c.def+=rand(1,2);
+  c.hp=c.maxHp;
 }
-function addExp(c,val){
-  c.exp += val;
-  while(c.exp >= expToNextLevel(c.level)){
-    c.exp -= expToNextLevel(c.level);
+function addExp(c,v){
+  c.exp+=v;
+  while(c.exp>=expToNextLevel(c.level)){
+    c.exp-=expToNextLevel(c.level);
     levelUp(c);
   }
 }
 
 /* ===== バトル ===== */
-function calcDamageWithSkill(c, enemy){
-  let atk = c.atk + c.weapon.atk;
-
-  if(Math.random() < c.weapon.crit) atk *= 2;
-  if(c.hp / c.maxHp <= 0.5) atk *= 2;
-
-  return Math.max(1, Math.floor(atk - enemy.def));
+function calcDamage(c,e){
+  let atk=c.atk+c.weapon.atk;
+  if(Math.random()<c.weapon.crit) atk*=2;
+  if(c.hp/c.maxHp<=0.5) atk*=2;
+  return Math.max(1,Math.floor(atk-e.def));
 }
 
 function randomAlive(){
-  const a = party.filter(c=>c.alive);
+  const a=party.filter(c=>c.alive);
   return a[Math.floor(Math.random()*a.length)];
 }
 
@@ -100,10 +179,9 @@ function battle(enemy,end){
   const it=setInterval(()=>{
     for(const c of party){
       if(!c.alive) continue;
-
-      let hits = (c.skill==="連撃" && Math.random()<0.3) ? 2 : 1;
+      let hits=(c.skill==="連撃"&&Math.random()<0.3)?2:1;
       for(let i=0;i<hits;i++){
-        enemy.hp -= calcDamageWithSkill(c, enemy);
+        enemy.hp-=calcDamage(c,enemy);
         if(enemy.hp<=0) break;
       }
       if(enemy.hp<=0) break;
@@ -113,14 +191,14 @@ function battle(enemy,end){
 
     if(enemy.hp<=0){
       clearInterval(it);
-      party.forEach(c=>c.alive && addExp(c,10));
+      party.forEach(c=>c.alive&&addExp(c,10));
       reviveParty();
       end();
       return;
     }
 
     const t=randomAlive();
-    t.hp -= Math.max(1, enemy.atk - t.def);
+    t.hp-=Math.max(1,enemy.atk-t.def);
     if(t.hp<=0) t.alive=false;
 
     if(!party.some(c=>c.alive)){
@@ -134,10 +212,10 @@ function battle(enemy,end){
 
 /* ===== 進行 ===== */
 function stepDungeon(){
-  distance += 10;
-  currentEnemy = new Enemy(distance);
+  distance+=10;
+  currentEnemy=new Enemy(distance);
   updateEnemyUI();
-  battle(currentEnemy, ()=>{
+  battle(currentEnemy,()=>{
     saveGame();
     updateUI();
   });
@@ -212,3 +290,6 @@ function loadGame(){
 loadGame();
 updateUI();
 </script>
+
+</body>
+</html>
