@@ -2,238 +2,265 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>Monster Slayer v3.6.0</title>
+<title>Monster Slayer: Skill Tree v3.7.0</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <style>
-:root { --bg: #0a0a0a; --panel: #161616; --accent: #f1c40f; --danger: #e74c3c; --text: #eee; }
+:root { --bg: #0d0d0d; --panel: #1a1a1a; --accent: #f1c40f; --text: #eee; --border: #333; }
 * { touch-action: manipulation; box-sizing: border-box; -webkit-user-select: none; }
-body { margin:0; background:var(--bg); color:var(--text); font-family: 'Hiragino Kaku Gothic ProN', sans-serif; height: 100dvh; display:flex; flex-direction:column; padding:10px; overflow:hidden; }
-button { background:#333; color:#eee; border:1px solid #555; border-radius:6px; cursor:pointer; font-weight:bold; }
-.toggleOn { background:#27ae60 !important; border-color:#2ecc71 !important; }
+body { margin:0; background:var(--bg); color:var(--text); font-family:sans-serif; height: 100dvh; display:flex; flex-direction:column; padding:8px; overflow:hidden; }
+button { background:#333; color:#eee; border:1px solid #555; border-radius:4px; cursor:pointer; padding:8px; font-weight:bold; }
+button:disabled { opacity: 0.3; cursor: default; }
 
-/* ギルド資産状況 */
-.guild-status { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
-.status-card { background:var(--panel); border-radius:8px; padding:8px; border:1px solid #333; text-align:center; }
-.status-card small { font-size:10px; color:#aaa; display:block; }
-.status-card span { font-size:16px; color:var(--accent); font-weight:bold; }
+/* 依頼状況 & 聖杯 */
+.top-nav { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; }
+.info-box { background:var(--panel); border:1px solid var(--border); padding:6px; border-radius:6px; font-size:12px; }
 
-/* バトルエリア（敵を最大化） */
-.battle-core { flex: 1; background:var(--panel); border:2px solid #444; border-radius:12px; display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative; overflow:hidden; margin-bottom:10px; }
-.enemy-emoji { font-size: 100px; margin: 10px 0; text-shadow: 0 0 20px rgba(231, 76, 60, 0.4); transition: transform 0.1s; }
-.enemy-name { font-size: 22px; font-weight: bold; color: var(--danger); margin-bottom: 5px; }
-.enemy-hp-container { width: 80%; }
-.hp-bar { background:#222; height:18px; border-radius:9px; overflow:hidden; border:1px solid #555; position:relative; }
-.hp-fill { background:linear-gradient(90deg, #c0392b, #e74c3c); height:100%; width:100%; transition: width 0.1s; }
-.progress-dots { position:absolute; top:10px; right:10px; font-size:12px; color:#888; }
+/* バトルエリア（敵アイコン適正化） */
+.battle-area { flex: 1.2; background:var(--panel); border:1px solid #444; border-radius:10px; display:flex; flex-direction:column; align-items:center; justify-content:center; margin-bottom:8px; position:relative; }
+.enemy-visual { font-size: 60px; margin: 10px; }
+.enemy-name { font-size: 18px; font-weight: bold; color: #e74c3c; }
+.hp-bar { width: 80%; background:#222; height:12px; border-radius:6px; overflow:hidden; border:1px solid #555; margin-top:10px; }
+.hp-fill { background:#c0392b; height:100%; width:100%; transition: width 0.1s; }
 
-/* プレイヤー情報（下部に配置） */
-.player-info { background:var(--panel); border:1px solid #333; border-radius:10px; padding:10px; display:grid; grid-template-columns: 1fr 2fr; gap:10px; align-items:center; }
-.hero-stats { font-size: 13px; line-height: 1.5; }
-.hp-val { color: #2ecc71; font-weight:bold; }
+/* 勇者ステータス（タップで詳細） */
+.hero-card { background:#222; border:1px solid var(--accent); border-radius:8px; padding:10px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; }
+.stat-mini { font-size: 13px; line-height: 1.4; }
 
-/* ログ */
-.log-area { height: 60px; background:#000; font-size:11px; color:#888; padding:5px; margin:8px 0; border-radius:5px; overflow-y:auto; display:flex; flex-direction:column-reverse; }
+.footer { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: 8px; }
 
-.footer { display: grid; grid-template-columns: 1fr 1fr 1.5fr; gap: 6px; height: 50px; }
-
-/* モーダル */
+/* モーダル共通 */
 .modal { display: none; position: fixed; inset:0; background:rgba(0,0,0,0.9); z-index:100; justify-content:center; align-items:center; }
-.modal-content { background:#222; border-radius:12px; width:90%; max-width:320px; padding:20px; border:1px solid #444; }
+.modal-content { background:#222; border-radius:12px; width:95%; max-width:350px; padding:15px; border:1px solid #444; max-height: 90vh; overflow-y: auto; }
+
+/* スキルツリー用スタイル */
+.tree-tab { display: flex; gap: 4px; margin-bottom: 10px; }
+.tree-tab button { flex: 1; font-size: 10px; }
+.skill-node { background:#111; border:1px solid #555; padding:8px; border-radius:6px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; }
+.skill-info { font-size: 11px; }
+.skill-info b { color: var(--accent); }
 </style>
 </head>
 <body>
 
-<div class="guild-status">
-    <div class="status-card"><small>ギルド聖杯Pt (強化用)</small><span id="holy">0</span></div>
-    <div class="status-card"><small>モンスター討伐Pt (ガチャ用)</small><span id="slayPt">0</span></div>
+<div class="top-nav">
+    <div class="info-box">🏰 依頼: <span id="dungeonName">未選択</span><br>🚩 進行: <span id="step">0/10</span></div>
+    <div class="info-box">✨ 聖杯Pt: <span id="holy">0</span><br>🎓 未消費SP: <span id="sp">0</span></div>
 </div>
 
-<div class="battle-core">
-    <div class="progress-dots" id="battleStep">依頼進行度: 0/10</div>
-    <div class="enemy-name" id="enemyName">---</div>
-    <div class="enemy-emoji" id="enemyEmoji">❔</div>
-    <div class="enemy-hp-container">
-        <div class="hp-bar"><div id="enemyHpFill" class="hp-fill"></div></div>
+<div class="battle-area">
+    <div id="enemyName" class="enemy-name">待機中</div>
+    <div id="enemyEmoji" class="enemy-visual">💤</div>
+    <div class="hp-bar"><div id="enemyHpFill" class="hp-fill"></div></div>
+</div>
+
+<div class="hero-card" onclick="openModal('skillModal')">
+    <div class="stat-mini">
+        <strong>勇者 Lv.<span id="heroLv">1</span></strong> (詳細を表示)<br>
+        HP: <span id="heroHp">0/0</span> | ATK: <span id="atk">0</span> | DEF: <span id="def">0</span>
     </div>
+    <div style="font-size:24px;">🛡️</div>
 </div>
-
-<div class="player-info">
-    <div style="font-size:30px; text-align:center;">🛡️</div>
-    <div class="hero-stats">
-        <strong>勇者 Lv.<span id="heroLv">1</span></strong><br>
-        HP: <span id="heroHp" class="hp-val">0/0</span><br>
-        ATK: <span id="atkVal">0</span> / DEF: <span id="defVal">0</span>
-    </div>
-</div>
-
-<div class="log-area" id="log"></div>
 
 <div class="footer">
-    <button onclick="openModal('upgradeModal')">✨強化</button>
-    <button onclick="openModal('gachaModal')">🎁ガチャ</button>
-    <button id="autoBtn" onclick="toggleAuto()" class="toggleOn">オートON</button>
+    <button onclick="openModal('questModal')" style="background:#2980b9;">⚔️ 依頼板</button>
+    <button onclick="openModal('holyModal')">✨ 聖杯強化</button>
+    <button id="autoBtn" onclick="toggleAuto()" style="background:#27ae60;">オートON</button>
 </div>
 
-<div id="upgradeModal" class="modal">
+<div id="questModal" class="modal">
     <div class="modal-content">
-        <h3 style="margin-top:0;">✨ 聖杯の加護 (強化)</h3>
-        <p style="font-size:12px; color:#aaa;">聖杯Ptを消費して基礎能力を上げます</p>
-        <div id="upRows"></div>
-        <button onclick="closeModal('upgradeModal')" style="width:100%; margin-top:10px;">閉じる</button>
+        <h3>⚔️ ギルド依頼板</h3>
+        <div style="display:grid; gap:8px;">
+            <button onclick="startDungeon(0)">🟢 初級：スライムの森</button>
+            <button onclick="startDungeon(1)">🟡 中級：ならず者の街</button>
+            <button onclick="startDungeon(2)">🔴 超級：魔王の城跡</button>
+        </div>
+        <button onclick="closeModal('questModal')" style="width:100%; margin-top:15px; background:#444;">戻る</button>
     </div>
 </div>
 
-<div id="gachaModal" class="modal">
-    <div class="modal-content" style="text-align:center;">
-        <h3 style="margin:0;">🎁 討伐報酬ガチャ</h3>
-        <div id="gachaResult" style="height:100px; display:flex; align-items:center; justify-content:center; font-size:20px; color:var(--accent);">討伐Ptを装備に変換！</div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-            <button onclick="playGacha(1)">1回 (10pt)</button>
-            <button onclick="playGacha(10)" style="background:#8e44ad;">10回 (100pt)</button>
+<div id="skillModal" class="modal">
+    <div class="modal-content">
+        <h3 style="margin:0;">🎓 スキル習得 (SP: <span id="sp2">0</span>)</h3>
+        <div class="tree-tab">
+            <button onclick="showTree('warrior')">戦士</button>
+            <button onclick="showTree('mage')">魔導</button>
+            <button onclick="showTree('cleric')">聖職</button>
         </div>
-        <button onclick="closeModal('gachaModal')" style="width:100%; margin-top:15px;">閉じる</button>
+        <div id="skillList"></div>
+        <button onclick="closeModal('skillModal')" style="width:100%; margin-top:10px;">閉じる</button>
+    </div>
+</div>
+
+<div id="holyModal" class="modal">
+    <div class="modal-content">
+        <h3>✨ 聖杯の加護</h3>
+        <p style="font-size:11px;">1Ptにつき大幅にステータスが上昇します</p>
+        <div id="holyRows"></div>
+        <button onclick="closeModal('holyModal')" style="width:100%; margin-top:10px;">閉じる</button>
     </div>
 </div>
 
 <script>
-const SAVE_KEY = "MonsterSlayer_v3.6";
-let holy=0, slayPt=0, autoIsOn=true, step=0, inBattle=false;
-let bonus={atk:0, def:0, hp:0};
-let hero = { lv:1, exp:0, hp:100, maxHp:100, atk:10, def:5, wVal:0, aVal:0 };
+const SAVE_KEY = "Slayer_SkillTree_v3.7";
+let holy=0, sp=0, autoIsOn=true, currentDungeon=null, dIdx=0, step=0, inBattle=false;
+let bonus={atk:0, def:0, hp:0}, skills={};
+let hero = { lv:1, exp:0, hp:100, maxHp:100, atk:10, def:5 };
 
-const MONSTERS = [
-    { n: "ゴブリン", e: "👺", hp: 1.0, atk: 1.0 },
-    { n: "オーク", e: "🐗", hp: 2.5, atk: 1.8 },
-    { n: "キメラ", e: "🦁", hp: 5.0, atk: 3.0 },
-    { n: "ドラゴン", e: "🐉", hp: 12.0, atk: 6.0 },
-    { n: "魔王の影", e: "💀", hp: 25.0, atk: 10.0 }
+const DUNGEONS = [
+    { n: "スライムの森", pow: 1, boss: "キングスライム", e: "🦎" },
+    { n: "ならず者の街", pow: 6, boss: "闇のギルド長", e: "🥷" },
+    { n: "魔王の城跡", pow: 20, boss: "破壊神", e: "💀" }
 ];
 
+const SKILL_DATA = {
+    warrior: [
+        { id:"w1", n:"剛力", d:"ATK+20", effect:{atk:20}, sp:1 },
+        { id:"w2", n:"不屈", d:"DEF+20", effect:{def:20}, sp:1 },
+        { id:"w3", n:"強撃", d:"15%の確率でダメージ2倍", effect:{crit:0.15}, sp:2 }
+    ],
+    mage: [
+        { id:"m1", n:"魔力集束", d:"ATK+40", effect:{atk:40}, sp:2 },
+        { id:"m2", n:"魔力の壁", d:"DEF+10, HP+100", effect:{def:10, hp:100}, sp:2 },
+        { id:"m3", n:"詠唱破棄", d:"攻撃速度が少し上昇", effect:{speed:20}, sp:3 }
+    ],
+    cleric: [
+        { id:"c1", n:"祈り", d:"HP+300", effect:{hp:300}, sp:1 },
+        { id:"c2", n:"リジェネ", d:"毎ターンHP5回復", effect:{reg:5}, sp:2 },
+        { id:"c3", n:"神の盾", d:"DEF+50", effect:{def:50}, sp:3 }
+    ]
+};
+
 function updateUI() {
-    const g = 1 + (hero.lv - 1) * 0.04;
-    hero.maxHp = Math.floor((200 + bonus.hp + (hero.lv-1)*25) * g);
-    hero.atk = Math.floor((15 + bonus.atk + (hero.lv-1)*4 + hero.wVal) * g);
-    hero.def = Math.floor((10 + bonus.def + (hero.lv-1)*3 + hero.aVal) * g);
-    
+    let sAtk=0, sDef=0, sHp=0;
+    Object.keys(skills).forEach(id => {
+        const data = [...SKILL_DATA.warrior, ...SKILL_DATA.mage, ...SKILL_DATA.cleric].find(x=>x.id===id);
+        if(data.effect.atk) sAtk += data.effect.atk;
+        if(data.effect.def) sDef += data.effect.def;
+        if(data.effect.hp) sHp += data.effect.hp;
+    });
+
+    const g = 1 + (hero.lv - 1) * 0.05;
+    hero.maxHp = Math.floor((200 + (bonus.hp * 100) + sHp + (hero.lv-1)*30) * g);
+    hero.atk = Math.floor((15 + (bonus.atk * 15) + sAtk + (hero.lv-1)*5) * g);
+    hero.def = Math.floor((10 + (bonus.def * 10) + sDef + (hero.lv-1)*4) * g);
+
     document.getElementById("holy").innerText = holy;
-    document.getElementById("slayPt").innerText = slayPt;
+    document.getElementById("sp").innerText = sp;
+    document.getElementById("sp2").innerText = sp;
     document.getElementById("heroLv").innerText = hero.lv;
     document.getElementById("heroHp").innerText = `${Math.floor(hero.hp)}/${hero.maxHp}`;
-    document.getElementById("atkVal").innerText = hero.atk;
-    document.getElementById("defVal").innerText = hero.def;
+    document.getElementById("atk").innerText = hero.atk;
+    document.getElementById("def").innerText = hero.def;
 
-    const ur = document.getElementById("upRows"); ur.innerHTML = "";
-    [{k:'atk',n:'攻撃力'},{k:'def',n:'防御力'},{k:'hp',n:'最大HP'}].forEach(s => {
-        const r = document.createElement("div"); r.style="display:flex; justify-content:space-between; margin-bottom:10px;";
-        r.innerHTML = `<span>${s.n}: ${bonus[s.k]}</span><div><button onclick="modBonus('${s.k}',1)">強化</button></div>`;
-        ur.appendChild(r);
+    const hr = document.getElementById("holyRows"); hr.innerHTML = "";
+    [{k:'atk',n:'攻撃力(+15)'},{k:'def',n:'防御力(+10)'},{k:'hp',n:'体力(+100)'}].forEach(s => {
+        const r = document.createElement("div"); r.style="display:flex; justify-content:space-between; margin-bottom:10px; background:#111; padding:8px; border-radius:6px;";
+        r.innerHTML = `<span>${s.n}: ${bonus[s.k]}</span><button onclick="modHoly('${s.k}')">強化</button>`;
+        hr.appendChild(r);
     });
 }
 
+function startDungeon(idx) {
+    dIdx = idx; currentDungeon = DUNGEONS[idx]; step = 0; inBattle = false;
+    document.getElementById("dungeonName").innerText = currentDungeon.n;
+    closeModal('questModal');
+    nextBattle();
+}
+
 function nextBattle() {
-    if(!autoIsOn || inBattle) return;
+    if(!currentDungeon || inBattle) return;
     step++;
     if(step > 10) {
-        addLog("👑 依頼達成！ボーナス聖杯Pt獲得", "#f1c40f");
-        holy += 1; step = 0; save(); 
+        addLog("🏰 依頼達成！聖杯Pt+2");
+        holy += 2; step = 0; save(); updateUI();
+        if(autoIsOn) setTimeout(() => startDungeon(dIdx), 1000);
+        return;
     }
-    document.getElementById("battleStep").innerText = `依頼進行度: ${step}/10`;
-    
-    // 敵の選定
-    const mBase = MONSTERS[Math.min(MONSTERS.length-1, Math.floor(hero.lv / 10))];
-    const rank = (step === 10) ? 2.5 : 1.0;
+    document.getElementById("step").innerText = `${step}/10`;
+    const isBoss = (step === 10);
+    const p = currentDungeon.pow * (isBoss ? 3 : 1);
     const enemy = {
-        name: (step === 10) ? `[BOSS] ${mBase.n}` : mBase.n,
-        emoji: mBase.e,
-        hp: (100 + hero.lv * 40) * mBase.hp * rank,
-        atk: (5 + hero.lv * 4) * mBase.atk * rank,
+        name: isBoss ? `[BOSS] ${currentDungeon.boss}` : "魔物",
+        hp: (100 + step*50) * p,
+        atk: (10 + step*5) * p,
         maxHp: 0
     };
     enemy.maxHp = enemy.hp;
-    
     document.getElementById("enemyName").innerText = enemy.name;
-    document.getElementById("enemyEmoji").innerText = enemy.emoji;
-    startFight(enemy);
+    document.getElementById("enemyEmoji").innerText = currentDungeon.e;
+    runFight(enemy);
 }
 
-function startFight(e) {
+function runFight(e) {
     inBattle = true;
     const it = setInterval(() => {
         // 勇者の攻撃
-        let d = Math.max(1, hero.atk - (e.atk * 0.2));
+        let d = Math.max(1, hero.atk - (e.atk*0.1));
+        if(skills.w3 && Math.random()<0.15) d *= 2;
         e.hp -= d;
-        document.getElementById("enemyEmoji").style.transform = "scale(0.9)";
-        setTimeout(() => document.getElementById("enemyEmoji").style.transform = "scale(1)", 50);
+        if(skills.c2) hero.hp = Math.min(hero.maxHp, hero.hp + 5);
 
         if(e.hp <= 0) {
             clearInterval(it);
-            document.getElementById("enemyHpFill").style.width = "0%";
-            addLog(`${e.name}を討伐！討伐Pt+10`);
-            slayPt += 10; hero.exp += 34;
-            if(hero.exp >= 100) { hero.lv++; hero.exp=0; addLog("🆙レベルアップ！"); }
+            addLog(`${e.name}を撃破`);
+            hero.exp += 40; if(hero.exp>=100){ hero.lv++; hero.exp=0; sp += 1; addLog("🆙レベルアップ！SP獲得"); }
             inBattle = false; save(); updateUI();
-            setTimeout(nextBattle, 100); // クリア後即次戦
+            if(autoIsOn) setTimeout(nextBattle, 100);
         } else {
-            // 敵の攻撃
             hero.hp -= Math.max(1, e.atk - hero.def);
             document.getElementById("enemyHpFill").style.width = (e.hp/e.maxHp*100) + "%";
             updateUI();
-
             if(hero.hp <= 0) {
                 clearInterval(it);
-                hero.hp = 0; addLog("💀敗北... 即座に戦線復帰します", "#e74c3c");
-                inBattle = false; updateUI();
-                setTimeout(() => { hero.hp = hero.maxHp; nextBattle(); }, 100); // 全滅後即再戦
+                addLog("💀全滅... 即座に再戦", "#e74c3c");
+                inBattle = false; hero.hp = hero.maxHp;
+                setTimeout(nextBattle, 100);
             }
         }
     }, 150);
 }
 
-function playGacha(t) {
-    const cost = t * 10;
-    if(slayPt < cost) return;
-    slayPt -= cost;
-    let res = "";
-    for(let i=0; i<t; i++) {
-        if(Math.random()>0.5) { hero.wVal += 2; res = "⚔️武器強化(+2)"; }
-        else { hero.aVal += 2; res = "🛡️防具強化(+2)"; }
-    }
-    document.getElementById("gachaResult").innerText = t > 1 ? `10連報酬獲得！` : res;
-    updateUI(); save();
+function showTree(type) {
+    const list = document.getElementById("skillList"); list.innerHTML = "";
+    SKILL_DATA[type].forEach(s => {
+        const has = skills[s.id];
+        const div = document.createElement("div"); div.className = "skill-node";
+        div.innerHTML = `
+            <div class="skill-info"><b>${s.n}</b> (SP:${s.sp})<br>${s.d}</div>
+            <button onclick="buySkill('${s.id}', ${s.sp})" ${has||sp<s.sp?'disabled':''}>${has?'習得済':'習得'}</button>
+        `;
+        list.appendChild(div);
+    });
 }
 
-function modBonus(k, v) {
-    if(holy >= 1) { bonus[k] += 1; holy -= 1; }
-    updateUI(); save();
+function buySkill(id, cost) {
+    if(sp >= cost) { sp -= cost; skills[id] = true; showTree(id.startsWith('w')?'warrior':id.startsWith('m')?'mage':'cleric'); updateUI(); save(); }
 }
 
-function toggleAuto() { 
-    autoIsOn = !autoIsOn; 
-    document.getElementById("autoBtn").innerText = autoIsOn ? "オートON" : "オートOFF";
-    document.getElementById("autoBtn").className = autoIsOn ? "toggleOn" : "";
-    if(autoIsOn) nextBattle(); 
+function modHoly(k) {
+    if(holy >= 1) { holy -= 1; bonus[k] += 1; updateUI(); save(); }
 }
-function openModal(id) { document.getElementById(id).style.display = "flex"; }
+
+function toggleAuto() { autoIsOn = !autoIsOn; document.getElementById("autoBtn").innerText = autoIsOn?"オートON":"オートOFF"; if(autoIsOn) nextBattle(); }
+function openModal(id) { document.getElementById(id).style.display = "flex"; if(id==='skillModal') showTree('warrior'); }
 function closeModal(id) { document.getElementById(id).style.display = "none"; }
-function addLog(m, col="#888") {
-    const l = document.getElementById("log"); const d = document.createElement("div");
-    d.style.color = col; d.innerText = m; l.prepend(d);
-    if(l.childNodes.length > 10) l.removeChild(l.lastChild);
+function addLog(m, c="#888") {
+    const l = document.getElementById("log"); // 簡易ログ
+    console.log(m); // 今回はUI上のログを整理しました
 }
 
 function save() {
-    const d = { holy, slayPt, bonus, hero: {lv:hero.lv, wV:hero.wVal, aV:hero.aVal}, autoIsOn};
+    const d = { holy, sp, bonus, skills, hero: {lv:hero.lv}, dIdx, autoIsOn };
     localStorage.setItem(SAVE_KEY, JSON.stringify(d));
 }
 function load() {
     const s = localStorage.getItem(SAVE_KEY);
     if(s) {
-        const d = JSON.parse(s); holy=d.holy; slayPt=d.slayPt; bonus=d.bonus;
-        hero.lv=d.hero.lv; hero.wVal=d.hero.wV; hero.aVal=d.hero.aV;
+        const d = JSON.parse(s); holy=d.holy; sp=d.sp; bonus=d.bonus; skills=d.skills; hero.lv=d.hero.lv; dIdx=d.dIdx;
     }
-    hero.hp = hero.maxHp;
 }
-load(); updateUI(); nextBattle();
+load(); updateUI();
 </script>
 </body>
 </html>
