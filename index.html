@@ -21,33 +21,24 @@ h2{font-size:18px;margin:4px 0;}
   padding:6px;
   margin-bottom:6px;
 }
-.buttons{
-  display:flex;
-  gap:4px;
-}
+.buttons{display:flex;gap:4px;}
 button{
   flex:1;
   background:#333;
   color:#eee;
   border:1px solid #555;
   border-radius:6px;
-  font-size:18px;
-  padding:12px 0;
+  font-size:20px;
+  padding:14px 0;
 }
 button:active{background:#666;transform:scale(0.97);}
 .dead{opacity:0.4;}
 .barWrap{background:#333;height:10px;border-radius:5px;overflow:hidden;}
 .bar{background:#e74c3c;height:100%;}
-.log{font-size:12px;max-height:80px;overflow:hidden;}
-select{width:100%;font-size:16px;margin:2px 0;}
-
 .partyRow{display:flex;align-items:center;gap:6px;margin:2px 0;}
-.charIcon{
- width:18px;height:18px;border-radius:4px;flex-shrink:0;
-}
-.enemyIcon{
- width:40px;height:40px;border-radius:6px;margin-bottom:4px;
-}
+.icon{width:18px;height:18px;border-radius:4px;}
+.enemyIcon{width:36px;height:36px;border-radius:6px;margin-bottom:4px;}
+.log{font-size:12px;max-height:70px;overflow:hidden;}
 </style>
 </head>
 
@@ -55,12 +46,9 @@ select{width:100%;font-size:16px;margin:2px 0;}
 
 <h2>聖杯オートRPG</h2>
 
-<div class="panel" id="jobSelect"></div>
-
 <div class="panel">
-距離：<span id="distance">0</span>m /
-転生：<span id="rebirth">0</span> /
-聖杯Pt：<span id="holy">0</span>
+距離 <span id="distance">0</span>m /
+転生 <span id="rebirth">0</span>
 </div>
 
 <div class="panel">
@@ -80,144 +68,137 @@ select{width:100%;font-size:16px;margin:2px 0;}
 <div class="panel buttons">
 <button onclick="stepDungeon()">進む</button>
 <button onclick="toggleAuto()">オート</button>
-<button onclick="changeSpeed()" id="speedBtn">×1</button>
 <button onclick="rebirth()">転生</button>
 </div>
 
 <script>
-/* ===== 職業 ===== */
+/* ===== キャラ定義 ===== */
+const CHAR_DATA=[
+ {name:"レオン",sex:"男",job:"せんし",color:"#3498db"},
+ {name:"ミラ",sex:"女",job:"とうぞく",color:"#f1c40f"},
+ {name:"アーク",sex:"男",job:"まほうつかい",color:"#9b59b6"},
+ {name:"セラ",sex:"女",job:"そうりょ",color:"#2ecc71"}
+];
+
+/* ===== 職業ステ ===== */
 const JOBS={
- 騎士:{hp:120,atk:8,def:8,row:"front",color:"#3498db"},
- 魔法:{hp:80,atk:14,def:3,row:"back",color:"#9b59b6"},
- 僧侶:{hp:90,atk:6,def:5,row:"back",color:"#2ecc71"}
+ せんし:{hp:140,atk:10,def:8},
+ とうぞく:{hp:100,atk:9,def:5},
+ まほうつかい:{hp:80,atk:14,def:3},
+ そうりょ:{hp:90,atk:6,def:4}
+};
+
+/* ===== スキル ===== */
+const SKILLS={
+ せんし:[
+  {n:"剛撃",a:c=>c.atk*=1.5},
+  {n:"防御態勢",p:c=>c.def+=2},
+  {n:"反撃",a:(c,e)=>e.hp-=c.def},
+  {n:"闘志",p:c=>c.atk+=2},
+  {n:"鉄壁",p:c=>c.maxHp+=20},
+  {n:"集中",a:c=>c.atk*=1.2},
+  {n:"剣気",p:c=>c.atk+=1},
+  {n:"守護",p:c=>c.def+=1},
+  {n:"決死",a:c=>c.atk*=2},
+  {n:"不屈",p:c=>c.maxHp+=10}
+ ],
+ とうぞく:[
+  {n:"急所",a:(c,e)=>e.hp-=c.atk},
+  {n:"回避",p:c=>c.def+=1},
+  {n:"連撃",a:(c,e)=>e.hp-=c.atk*0.8},
+  {n:"俊敏",p:c=>c.atk+=1},
+  {n:"毒刃",a:(c,e)=>e.hp-=3},
+  {n:"影",p:c=>c.def+=1},
+  {n:"奇襲",a:(c,e)=>e.hp-=c.atk*1.2},
+  {n:"盗賊勘",p:c=>c.atk+=1},
+  {n:"疾走",p:c=>c.maxHp+=10},
+  {n:"弱体",a:(c,e)=>e.def-=1}
+ ],
+ まほうつかい:[
+  {n:"火球",a:(c,e)=>e.hp-=c.atk*1.5},
+  {n:"魔力集中",p:c=>c.atk+=2},
+  {n:"雷撃",a:(c,e)=>e.hp-=c.atk},
+  {n:"知識",p:c=>c.def+=1},
+  {n:"氷結",a:(c,e)=>e.def-=1},
+  {n:"詠唱",p:c=>c.atk+=1},
+  {n:"爆裂",a:(c,e)=>e.hp-=c.atk*2},
+  {n:"魔防",p:c=>c.def+=1},
+  {n:"精神",p:c=>c.maxHp+=10},
+  {n:"魔力放出",a:(c,e)=>e.hp-=c.atk}
+ ],
+ そうりょ:[
+  {n:"回復",a:c=>c.hp=Math.min(c.maxHp,c.hp+20)},
+  {n:"祈り",p:c=>c.maxHp+=10},
+  {n:"祝福",p:c=>c.atk+=1},
+  {n:"加護",p:c=>c.def+=1},
+  {n:"癒し",a:c=>c.hp+=10},
+  {n:"聖撃",a:(c,e)=>e.hp-=c.atk},
+  {n:"再生",p:c=>c.hp+=1},
+  {n:"光盾",p:c=>c.def+=1},
+  {n:"慈愛",p:c=>c.maxHp+=10},
+  {n:"浄化",a:(c,e)=>e.def-=1}
+ ]
 };
 
 /* ===== 敵 ===== */
-const ENEMIES=[
- {name:"スライム",color:"#1abc9c"},
- {name:"ゴブリン",color:"#27ae60"},
- {name:"スケルトン",color:"#bdc3c7"},
- {name:"オーク",color:"#7f8c8d"}
-];
+const ENEMY_NAMES=["スライム","ゴブリン","オーク","スケルトン"];
 
-/* ===== キャラ ===== */
-class Character{
- constructor(job){
-  const j=JOBS[job];
-  this.job=job;
-  this.level=1;this.exp=0;
-  this.baseHp=j.hp;this.baseAtk=j.atk;this.baseDef=j.def;
-  this.row=j.row;this.color=j.color;
-  this.updateStats();
-  this.hp=this.maxHp;this.alive=true;
- }
- updateStats(){
-  this.maxHp=this.baseHp;
-  this.atk=this.baseAtk;
-  this.def=this.baseDef;
+class Enemy{
+ constructor(dist){
+  this.name=ENEMY_NAMES[Math.floor(Math.random()*ENEMY_NAMES.length)];
+  this.maxHp=40+dist*0.6;
+  this.hp=this.maxHp;
+  this.atk=6+dist*0.05;
+  this.def=dist*0.02;
  }
 }
 
-/* ===== 敵 ===== */
-class Enemy{
- constructor(dist){
-  const e=ENEMIES[Math.floor(Math.random()*ENEMIES.length)];
-  this.name=e.name;
-  this.color=e.color;
-  this.maxHp=Math.floor(40+dist*0.5);
-  this.hp=this.maxHp;
-  this.atk=Math.floor(6+dist*0.05);
-  this.def=Math.floor(dist*0.02);
+/* ===== キャラ ===== */
+class Character{
+ constructor(d){
+  this.name=d.name;this.sex=d.sex;this.job=d.job;this.color=d.color;
+  const j=JOBS[d.job];
+  this.level=1;this.exp=0;
+  this.maxHp=j.hp;this.hp=j.hp;
+  this.atk=j.atk;this.def=j.def;
+  this.alive=true;
+  this.skills=SKILLS[d.job];
  }
 }
 
 /* ===== 状態 ===== */
-let distance=0,rebirthCount=0,holyPoint=0;
-let speed=1,autoTimer=null,currentEnemy=null;
-let party=[];
+let party=[],distance=0,rebirthCount=0;
+let currentEnemy=null,autoTimer=null;
+const speed=8;
 
 /* ===== ログ ===== */
-function addLog(t){
- log.innerHTML=t+"<br>"+log.innerHTML;
-}
-
-/* ===== 職業UI ===== */
-function setupJobSelect(){
- jobSelect.innerHTML="<strong>職業変更</strong>";
- for(let i=0;i<5;i++){
-  const s=document.createElement("select");
-  for(const j in JOBS){
-   const o=document.createElement("option");
-   o.value=j;o.textContent=j;
-   s.appendChild(o);
-  }
-  jobSelect.appendChild(s);
- }
- const b=document.createElement("button");
- b.textContent="変更確定";
- b.onclick=applyJobs;
- jobSelect.appendChild(b);
-}
-
-/* ===== 初期 ===== */
-function initParty(){
- party=Array.from({length:5},()=>new Character("騎士"));
- updateUI();
-}
-
-/* ===== 職業反映 ===== */
-function applyJobs(){
- party=[...jobSelect.querySelectorAll("select")]
-  .map(s=>new Character(s.value));
- updateUI();
-}
-
-/* ===== 成長 ===== */
-function expNeed(lv){return Math.floor(20*Math.pow(lv,1.5));}
-function levelUp(c){
- c.level++;c.baseHp+=10;c.baseAtk+=3;c.baseDef+=2;
- c.updateStats();c.hp=c.maxHp;
- addLog(`${c.job}がLv${c.level}に成長`);
-}
+function logAdd(t){log.innerHTML=t+"<br>"+log.innerHTML;}
 
 /* ===== バトル ===== */
-function calcDamage(c,e){
- return Math.max(1,Math.floor(c.atk*(c.row==="back"?1.2:1)-e.def));
-}
-function randomAlive(){
- const a=party.filter(c=>c.alive);
- return a[Math.floor(Math.random()*a.length)];
-}
-function reviveParty(){
- party.forEach(c=>{c.alive=true;c.hp=c.maxHp;});
-}
 function battle(enemy,end){
  const it=setInterval(()=>{
   for(const c of party){
    if(!c.alive)continue;
-   enemy.hp-=calcDamage(c,enemy);
+   if(Math.random()<0.3){
+    const s=c.skills[Math.floor(Math.random()*c.skills.length)];
+    s.a && s.a(c,enemy);
+    logAdd(`${c.name}の${s.n}`);
+   }else{
+    enemy.hp-=Math.max(1,c.atk-enemy.def);
+   }
    if(enemy.hp<=0)break;
   }
   updateEnemyUI();
   if(enemy.hp<=0){
    clearInterval(it);
-   party.forEach(c=>{
-    c.exp+=10;
-    while(c.exp>=expNeed(c.level)){
-     c.exp-=expNeed(c.level);
-     levelUp(c);
-    }
-   });
-   reviveParty();end();return;
+   party.forEach(c=>c.exp+=10);
+   end();return;
   }
-  const t=randomAlive();
+  const t=party.find(c=>c.alive);
   t.hp-=Math.max(1,enemy.atk-t.def);
   if(t.hp<=0)t.alive=false;
-  if(!party.some(c=>c.alive)){
-   clearInterval(it);reviveParty();end();
-  }
   updateUI();
- },700/speed);
+ },600/speed);
 }
 
 /* ===== 進行 ===== */
@@ -232,19 +213,17 @@ function stepDungeon(){
 function updateUI(){
  distanceEl.textContent=distance;
  rebirthEl.textContent=rebirthCount;
- holyEl.textContent=holyPoint;
  partyEl.innerHTML="";
- party.forEach((c,i)=>{
-  const row=document.createElement("div");
-  row.className="partyRow "+(c.alive?"":"dead");
-  const icon=document.createElement("div");
-  icon.className="charIcon";
-  icon.style.background=c.color;
-  row.appendChild(icon);
-  row.appendChild(document.createTextNode(
-   `#${i+1} ${c.job} Lv${c.level} HP${c.hp}/${c.maxHp} ATK${c.atk} DEF${c.def}`
+ party.forEach(c=>{
+  const r=document.createElement("div");
+  r.className="partyRow "+(c.alive?"":"dead");
+  const i=document.createElement("div");
+  i.className="icon";i.style.background=c.color;
+  r.appendChild(i);
+  r.appendChild(document.createTextNode(
+   `${c.name}(${c.job}) Lv${c.level} HP${c.hp}/${c.maxHp}`
   ));
-  partyEl.appendChild(row);
+  partyEl.appendChild(r);
  });
 }
 function updateEnemyUI(){
@@ -252,7 +231,6 @@ function updateEnemyUI(){
  enemyName.textContent=currentEnemy.name;
  enemyText.textContent=`HP ${currentEnemy.hp}/${currentEnemy.maxHp}`;
  enemyHpBar.style.width=(currentEnemy.hp/currentEnemy.maxHp*100)+"%";
- enemyIcon.style.background=currentEnemy.color;
 }
 
 /* ===== 操作 ===== */
@@ -261,37 +239,20 @@ function toggleAuto(){
  (clearInterval(autoTimer),autoTimer=null):
  (autoTimer=setInterval(stepDungeon,2000/speed));
 }
-function changeSpeed(){
- speed=speed===1?2:speed===2?4:1;
- speedBtn.textContent="×"+speed;
-}
-
-/* ===== 転生 ===== */
 function rebirth(){
- if(distance<100){addLog("100m未満では転生不可");return;}
- rebirthCount++;
- holyPoint+=Math.floor(distance/100);
- distance=0;
- initParty();
- addLog("転生した");
+ if(distance<100)return logAdd("100m未満では転生不可");
+ rebirthCount++;distance=0;
+ party.forEach(c=>{
+  c.maxHp+=20;c.atk+=5;c.def+=3;
+  c.hp=c.maxHp;c.alive=true;
+ });
+ logAdd("転生した");
+ updateUI();
 }
-
-/* ===== DOM ===== */
-const jobSelect=document.getElementById("jobSelect");
-const distanceEl=document.getElementById("distance");
-const rebirthEl=document.getElementById("rebirth");
-const holyEl=document.getElementById("holy");
-const partyEl=document.getElementById("party");
-const enemyName=document.getElementById("enemyName");
-const enemyText=document.getElementById("enemyText");
-const enemyHpBar=document.getElementById("enemyHpBar");
-const enemyIcon=document.getElementById("enemyIcon");
-const log=document.getElementById("log");
-const speedBtn=document.getElementById("speedBtn");
 
 /* ===== 起動 ===== */
-setupJobSelect();
-initParty();
+party=CHAR_DATA.map(d=>new Character(d));
+updateUI();
 </script>
 
 </body>
