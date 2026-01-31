@@ -28,17 +28,16 @@ button{
   color:#eee;
   border:1px solid #555;
   border-radius:6px;
-  font-size:20px;
-  padding:14px 0;
+  font-size:18px;
+  padding:12px 0;
 }
-button:active{background:#666;transform:scale(0.97);}
+button:active{background:#666;}
 .dead{opacity:0.4;}
 .barWrap{background:#333;height:10px;border-radius:5px;overflow:hidden;}
 .bar{background:#e74c3c;height:100%;}
 .partyRow{display:flex;align-items:center;gap:6px;margin:2px 0;}
-.icon{width:18px;height:18px;border-radius:4px;}
-.enemyIcon{width:36px;height:36px;border-radius:6px;margin-bottom:4px;}
-.log{font-size:12px;max-height:70px;overflow:hidden;}
+.icon{width:16px;height:16px;border-radius:4px;}
+.log{font-size:12px;max-height:80px;overflow:hidden;}
 </style>
 </head>
 
@@ -48,12 +47,13 @@ button:active{background:#666;transform:scale(0.97);}
 
 <div class="panel">
 距離 <span id="distance">0</span>m /
-転生 <span id="rebirth">0</span>
+転生 <span id="rebirth">0</span> /
+聖杯Pt <span id="holy">0</span>
 </div>
 
 <div class="panel">
-<div id="enemyIcon" class="enemyIcon"></div>
-<strong id="enemyName"></strong>
+<strong>敵</strong>
+<div id="enemyName"></div>
 <div id="enemyText"></div>
 <div class="barWrap"><div id="enemyHpBar" class="bar"></div></div>
 </div>
@@ -61,6 +61,15 @@ button:active{background:#666;transform:scale(0.97);}
 <div class="panel">
 <strong>パーティ</strong>
 <div id="party"></div>
+</div>
+
+<div class="panel">
+<strong>聖杯強化（恒久）</strong>
+<div class="buttons">
+<button onclick="upgrade('atk')">ATK+</button>
+<button onclick="upgrade('def')">DEF+</button>
+<button onclick="upgrade('hp')">HP+</button>
+</div>
 </div>
 
 <div class="panel log" id="log"></div>
@@ -74,70 +83,17 @@ button:active{background:#666;transform:scale(0.97);}
 <script>
 /* ===== キャラ定義 ===== */
 const CHAR_DATA=[
- {name:"レオン",sex:"男",job:"せんし",color:"#3498db"},
- {name:"ミラ",sex:"女",job:"とうぞく",color:"#f1c40f"},
- {name:"アーク",sex:"男",job:"まほうつかい",color:"#9b59b6"},
- {name:"セラ",sex:"女",job:"そうりょ",color:"#2ecc71"}
+ {name:"レオン",job:"せんし",color:"#3498db"},
+ {name:"ミラ",job:"とうぞく",color:"#f1c40f"},
+ {name:"アーク",job:"まほうつかい",color:"#9b59b6"},
+ {name:"セラ",job:"そうりょ",color:"#2ecc71"}
 ];
 
-/* ===== 職業ステ ===== */
 const JOBS={
  せんし:{hp:140,atk:10,def:8},
  とうぞく:{hp:100,atk:9,def:5},
  まほうつかい:{hp:80,atk:14,def:3},
  そうりょ:{hp:90,atk:6,def:4}
-};
-
-/* ===== スキル ===== */
-const SKILLS={
- せんし:[
-  {n:"剛撃",a:c=>c.atk*=1.5},
-  {n:"防御態勢",p:c=>c.def+=2},
-  {n:"反撃",a:(c,e)=>e.hp-=c.def},
-  {n:"闘志",p:c=>c.atk+=2},
-  {n:"鉄壁",p:c=>c.maxHp+=20},
-  {n:"集中",a:c=>c.atk*=1.2},
-  {n:"剣気",p:c=>c.atk+=1},
-  {n:"守護",p:c=>c.def+=1},
-  {n:"決死",a:c=>c.atk*=2},
-  {n:"不屈",p:c=>c.maxHp+=10}
- ],
- とうぞく:[
-  {n:"急所",a:(c,e)=>e.hp-=c.atk},
-  {n:"回避",p:c=>c.def+=1},
-  {n:"連撃",a:(c,e)=>e.hp-=c.atk*0.8},
-  {n:"俊敏",p:c=>c.atk+=1},
-  {n:"毒刃",a:(c,e)=>e.hp-=3},
-  {n:"影",p:c=>c.def+=1},
-  {n:"奇襲",a:(c,e)=>e.hp-=c.atk*1.2},
-  {n:"盗賊勘",p:c=>c.atk+=1},
-  {n:"疾走",p:c=>c.maxHp+=10},
-  {n:"弱体",a:(c,e)=>e.def-=1}
- ],
- まほうつかい:[
-  {n:"火球",a:(c,e)=>e.hp-=c.atk*1.5},
-  {n:"魔力集中",p:c=>c.atk+=2},
-  {n:"雷撃",a:(c,e)=>e.hp-=c.atk},
-  {n:"知識",p:c=>c.def+=1},
-  {n:"氷結",a:(c,e)=>e.def-=1},
-  {n:"詠唱",p:c=>c.atk+=1},
-  {n:"爆裂",a:(c,e)=>e.hp-=c.atk*2},
-  {n:"魔防",p:c=>c.def+=1},
-  {n:"精神",p:c=>c.maxHp+=10},
-  {n:"魔力放出",a:(c,e)=>e.hp-=c.atk}
- ],
- そうりょ:[
-  {n:"回復",a:c=>c.hp=Math.min(c.maxHp,c.hp+20)},
-  {n:"祈り",p:c=>c.maxHp+=10},
-  {n:"祝福",p:c=>c.atk+=1},
-  {n:"加護",p:c=>c.def+=1},
-  {n:"癒し",a:c=>c.hp+=10},
-  {n:"聖撃",a:(c,e)=>e.hp-=c.atk},
-  {n:"再生",p:c=>c.hp+=1},
-  {n:"光盾",p:c=>c.def+=1},
-  {n:"慈愛",p:c=>c.maxHp+=10},
-  {n:"浄化",a:(c,e)=>e.def-=1}
- ]
 };
 
 /* ===== 敵 ===== */
@@ -155,50 +111,78 @@ class Enemy{
 
 /* ===== キャラ ===== */
 class Character{
- constructor(d){
-  this.name=d.name;this.sex=d.sex;this.job=d.job;this.color=d.color;
+ constructor(d,bonus){
   const j=JOBS[d.job];
-  this.level=1;this.exp=0;
-  this.maxHp=j.hp;this.hp=j.hp;
-  this.atk=j.atk;this.def=j.def;
+  this.name=d.name;
+  this.job=d.job;
+  this.color=d.color;
+  this.level=1;
+  this.exp=0;
+  this.maxHp=j.hp+bonus.hp;
+  this.atk=j.atk+bonus.atk;
+  this.def=j.def+bonus.def;
+  this.hp=this.maxHp;
   this.alive=true;
-  this.skills=SKILLS[d.job];
  }
 }
 
 /* ===== 状態 ===== */
-let party=[],distance=0,rebirthCount=0;
-let currentEnemy=null,autoTimer=null;
-const speed=8;
+let party=[];
+let distance=0;
+let rebirthCount=0;
+let holyPoint=0;
+let bonus={atk:0,def:0,hp:0};
+let currentEnemy=null;
+let autoTimer=null;
 
 /* ===== ログ ===== */
-function logAdd(t){log.innerHTML=t+"<br>"+log.innerHTML;}
+function addLog(t){
+ log.innerHTML=t+"<br>"+log.innerHTML;
+}
+
+/* ===== セーブ ===== */
+function saveGame(){
+ localStorage.setItem("holyRPG",JSON.stringify({
+  distance,rebirthCount,holyPoint,bonus,party
+ }));
+}
+function loadGame(){
+ const r=localStorage.getItem("holyRPG");
+ if(!r) return false;
+ const d=JSON.parse(r);
+ distance=d.distance;
+ rebirthCount=d.rebirthCount;
+ holyPoint=d.holyPoint;
+ bonus=d.bonus;
+ party=d.party.map((p,i)=>new Character(CHAR_DATA[i],bonus));
+ party.forEach((c,i)=>c.level=d.party[i].level);
+ return true;
+}
+
+/* ===== 初期化 ===== */
+function initParty(){
+ party=CHAR_DATA.map(d=>new Character(d,bonus));
+}
 
 /* ===== バトル ===== */
 function battle(enemy,end){
  const it=setInterval(()=>{
-  for(const c of party){
-   if(!c.alive)continue;
-   if(Math.random()<0.3){
-    const s=c.skills[Math.floor(Math.random()*c.skills.length)];
-    s.a && s.a(c,enemy);
-    logAdd(`${c.name}の${s.n}`);
-   }else{
-    enemy.hp-=Math.max(1,c.atk-enemy.def);
-   }
-   if(enemy.hp<=0)break;
-  }
+  party.forEach(c=>{
+   if(!c.alive) return;
+   enemy.hp-=Math.max(1,c.atk-enemy.def);
+  });
   updateEnemyUI();
   if(enemy.hp<=0){
    clearInterval(it);
    party.forEach(c=>c.exp+=10);
-   end();return;
+   end();
+   return;
   }
   const t=party.find(c=>c.alive);
   t.hp-=Math.max(1,enemy.atk-t.def);
   if(t.hp<=0)t.alive=false;
   updateUI();
- },600/speed);
+ },800/8);
 }
 
 /* ===== 進行 ===== */
@@ -206,13 +190,17 @@ function stepDungeon(){
  distance+=10;
  currentEnemy=new Enemy(distance);
  updateEnemyUI();
- battle(currentEnemy,updateUI);
+ battle(currentEnemy,()=>{
+  saveGame();
+  updateUI();
+ });
 }
 
 /* ===== UI ===== */
 function updateUI(){
  distanceEl.textContent=distance;
  rebirthEl.textContent=rebirthCount;
+ holyEl.textContent=holyPoint;
  partyEl.innerHTML="";
  party.forEach(c=>{
   const r=document.createElement("div");
@@ -221,7 +209,7 @@ function updateUI(){
   i.className="icon";i.style.background=c.color;
   r.appendChild(i);
   r.appendChild(document.createTextNode(
-   `${c.name}(${c.job}) Lv${c.level} HP${c.hp}/${c.maxHp}`
+   `${c.name}(${c.job}) Lv${c.level} HP${c.hp}/${c.maxHp} ATK${c.atk} DEF${c.def}`
   ));
   partyEl.appendChild(r);
  });
@@ -237,21 +225,44 @@ function updateEnemyUI(){
 function toggleAuto(){
  autoTimer?
  (clearInterval(autoTimer),autoTimer=null):
- (autoTimer=setInterval(stepDungeon,2000/speed));
+ (autoTimer=setInterval(stepDungeon,2000/8));
 }
+
+/* ===== 転生 ===== */
 function rebirth(){
- if(distance<100)return logAdd("100m未満では転生不可");
- rebirthCount++;distance=0;
- party.forEach(c=>{
-  c.maxHp+=20;c.atk+=5;c.def+=3;
-  c.hp=c.maxHp;c.alive=true;
- });
- logAdd("転生した");
+ if(distance<100){addLog("100m未満では転生不可");return;}
+ rebirthCount++;
+ holyPoint+=Math.floor(distance/100);
+ distance=0;
+ initParty();
+ addLog("転生して聖杯Pt獲得");
+ saveGame();
  updateUI();
 }
 
+/* ===== 聖杯強化 ===== */
+function upgrade(type){
+ if(holyPoint<=0)return;
+ holyPoint--;
+ bonus[type]+= type==="hp"?10:1;
+ initParty();
+ addLog(`${type.toUpperCase()}を強化`);
+ saveGame();
+ updateUI();
+}
+
+/* ===== DOM ===== */
+const distanceEl=document.getElementById("distance");
+const rebirthEl=document.getElementById("rebirth");
+const holyEl=document.getElementById("holy");
+const partyEl=document.getElementById("party");
+const enemyName=document.getElementById("enemyName");
+const enemyText=document.getElementById("enemyText");
+const enemyHpBar=document.getElementById("enemyHpBar");
+const log=document.getElementById("log");
+
 /* ===== 起動 ===== */
-party=CHAR_DATA.map(d=>new Character(d));
+if(!loadGame()) initParty();
 updateUI();
 </script>
 
