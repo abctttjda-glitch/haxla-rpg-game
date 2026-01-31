@@ -40,6 +40,14 @@ button:active{background:#666;transform:scale(0.97);}
 .bar{background:#e74c3c;height:100%;}
 .log{font-size:12px;max-height:80px;overflow:hidden;}
 select{width:100%;font-size:16px;margin:2px 0;}
+
+.partyRow{display:flex;align-items:center;gap:6px;margin:2px 0;}
+.charIcon{
+ width:18px;height:18px;border-radius:4px;flex-shrink:0;
+}
+.enemyIcon{
+ width:40px;height:40px;border-radius:6px;margin-bottom:4px;
+}
 </style>
 </head>
 
@@ -56,12 +64,17 @@ select{width:100%;font-size:16px;margin:2px 0;}
 </div>
 
 <div class="panel">
+<div id="enemyIcon" class="enemyIcon"></div>
 <strong id="enemyName"></strong>
 <div id="enemyText"></div>
 <div class="barWrap"><div id="enemyHpBar" class="bar"></div></div>
 </div>
 
-<div class="panel"><strong>パーティ</strong><div id="party"></div></div>
+<div class="panel">
+<strong>パーティ</strong>
+<div id="party"></div>
+</div>
+
 <div class="panel log" id="log"></div>
 
 <div class="panel buttons">
@@ -74,14 +87,18 @@ select{width:100%;font-size:16px;margin:2px 0;}
 <script>
 /* ===== 職業 ===== */
 const JOBS={
- 騎士:{hp:120,atk:8,def:8,row:"front"},
- 魔法:{hp:80,atk:14,def:3,row:"back"},
- 僧侶:{hp:90,atk:6,def:5,row:"back"}
+ 騎士:{hp:120,atk:8,def:8,row:"front",color:"#3498db"},
+ 魔法:{hp:80,atk:14,def:3,row:"back",color:"#9b59b6"},
+ 僧侶:{hp:90,atk:6,def:5,row:"back",color:"#2ecc71"}
 };
 
-/* ===== 敵名 ===== */
-const ENEMY_NAMES=["スライム","ゴブリン","スケルトン","オーク","魔獣"];
-const BOSS_NAMES=["迷宮の番人","深淵の魔物","古代竜"];
+/* ===== 敵 ===== */
+const ENEMIES=[
+ {name:"スライム",color:"#1abc9c"},
+ {name:"ゴブリン",color:"#27ae60"},
+ {name:"スケルトン",color:"#bdc3c7"},
+ {name:"オーク",color:"#7f8c8d"}
+];
 
 /* ===== キャラ ===== */
 class Character{
@@ -90,10 +107,9 @@ class Character{
   this.job=job;
   this.level=1;this.exp=0;
   this.baseHp=j.hp;this.baseAtk=j.atk;this.baseDef=j.def;
-  this.row=j.row;
+  this.row=j.row;this.color=j.color;
   this.updateStats();
-  this.hp=this.maxHp;
-  this.alive=true;
+  this.hp=this.maxHp;this.alive=true;
  }
  updateStats(){
   this.maxHp=this.baseHp;
@@ -105,14 +121,13 @@ class Character{
 /* ===== 敵 ===== */
 class Enemy{
  constructor(dist){
-  const boss=dist%100===0;
-  this.name=boss?BOSS_NAMES[Math.floor(dist/100)%3]:
-    ENEMY_NAMES[Math.floor(Math.random()*ENEMY_NAMES.length)];
-  let m=boss?5:1;
-  this.maxHp=Math.floor((40+dist*0.4)*m);
+  const e=ENEMIES[Math.floor(Math.random()*ENEMIES.length)];
+  this.name=e.name;
+  this.color=e.color;
+  this.maxHp=Math.floor(40+dist*0.5);
   this.hp=this.maxHp;
-  this.atk=Math.floor((6+dist*0.05)*m);
-  this.def=Math.floor(dist*0.02*m);
+  this.atk=Math.floor(6+dist*0.05);
+  this.def=Math.floor(dist*0.02);
  }
 }
 
@@ -144,7 +159,7 @@ function setupJobSelect(){
  jobSelect.appendChild(b);
 }
 
-/* ===== 初期パーティ生成 ===== */
+/* ===== 初期 ===== */
 function initParty(){
  party=Array.from({length:5},()=>new Character("騎士"));
  updateUI();
@@ -162,7 +177,7 @@ function expNeed(lv){return Math.floor(20*Math.pow(lv,1.5));}
 function levelUp(c){
  c.level++;c.baseHp+=10;c.baseAtk+=3;c.baseDef+=2;
  c.updateStats();c.hp=c.maxHp;
- addLog(`${c.job} Lv${c.level}に成長`);
+ addLog(`${c.job}がLv${c.level}に成長`);
 }
 
 /* ===== バトル ===== */
@@ -207,7 +222,6 @@ function battle(enemy,end){
 
 /* ===== 進行 ===== */
 function stepDungeon(){
- if(party.length===0)return;
  distance+=10;
  currentEnemy=new Enemy(distance);
  updateEnemyUI();
@@ -221,11 +235,16 @@ function updateUI(){
  holyEl.textContent=holyPoint;
  partyEl.innerHTML="";
  party.forEach((c,i)=>{
-  const d=document.createElement("div");
-  d.className=c.alive?"":"dead";
-  d.textContent=
-   `#${i+1} ${c.job} Lv${c.level} HP${c.hp}/${c.maxHp} ATK${c.atk} DEF${c.def}`;
-  partyEl.appendChild(d);
+  const row=document.createElement("div");
+  row.className="partyRow "+(c.alive?"":"dead");
+  const icon=document.createElement("div");
+  icon.className="charIcon";
+  icon.style.background=c.color;
+  row.appendChild(icon);
+  row.appendChild(document.createTextNode(
+   `#${i+1} ${c.job} Lv${c.level} HP${c.hp}/${c.maxHp} ATK${c.atk} DEF${c.def}`
+  ));
+  partyEl.appendChild(row);
  });
 }
 function updateEnemyUI(){
@@ -233,6 +252,7 @@ function updateEnemyUI(){
  enemyName.textContent=currentEnemy.name;
  enemyText.textContent=`HP ${currentEnemy.hp}/${currentEnemy.maxHp}`;
  enemyHpBar.style.width=(currentEnemy.hp/currentEnemy.maxHp*100)+"%";
+ enemyIcon.style.background=currentEnemy.color;
 }
 
 /* ===== 操作 ===== */
@@ -265,6 +285,7 @@ const partyEl=document.getElementById("party");
 const enemyName=document.getElementById("enemyName");
 const enemyText=document.getElementById("enemyText");
 const enemyHpBar=document.getElementById("enemyHpBar");
+const enemyIcon=document.getElementById("enemyIcon");
 const log=document.getElementById("log");
 const speedBtn=document.getElementById("speedBtn");
 
