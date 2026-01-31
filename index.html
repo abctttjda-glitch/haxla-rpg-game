@@ -33,7 +33,7 @@ button{
   color:#eee;
   border:1px solid #555;
   border-radius:6px;
-  font-size:18px;       /* ← ボタン文字大 */
+  font-size:18px;
   padding:10px 0;
   margin:4px 0;
 }
@@ -62,6 +62,12 @@ button.active{
   background:#e74c3c;
   height:100%;
 }
+
+.log{
+  font-size:12px;
+  max-height:80px;
+  overflow:hidden;
+}
 </style>
 </head>
 
@@ -88,31 +94,33 @@ button.active{
   <div id="party"></div>
 </div>
 
+<div class="panel log" id="log"></div>
+
 <div class="panel">
   <button onclick="stepDungeon()">進む</button>
   <button id="autoBtn" onclick="toggleAuto()">オート</button>
   <button id="speedBtn" onclick="changeSpeed()">倍速 ×1</button>
-  <button onclick="rebirth()">転生</button>
+  <button onclick="rebirth()">転生（100m以上）</button>
 </div>
 
 <script>
-/* ===== 職業定義 ===== */
-const JOBS = {
-  騎士:{ hp:120, atk:8, def:8, row:"front" },
-  魔法:{ hp:80, atk:14, def:3, row:"back" },
-  僧侶:{ hp:90, atk:6, def:5, row:"back" }
+/* ===== 職業 ===== */
+const JOBS={
+  騎士:{hp:120,atk:8,def:8,row:"front"},
+  魔法:{hp:80,atk:14,def:3,row:"back"},
+  僧侶:{hp:90,atk:6,def:5,row:"back"}
 };
 
 /* ===== キャラ ===== */
 class Character{
   constructor(){
-    this.job = Object.keys(JOBS)[Math.floor(Math.random()*3)];
-    const j = JOBS[this.job];
+    this.job=Object.keys(JOBS)[Math.floor(Math.random()*3)];
+    const j=JOBS[this.job];
     this.level=1;
     this.exp=0;
-    this.baseHp=j.hp + holyPower.hp;
-    this.baseAtk=j.atk + holyPower.atk;
-    this.baseDef=j.def + holyPower.def;
+    this.baseHp=j.hp+holyPower.hp;
+    this.baseAtk=j.atk+holyPower.atk;
+    this.baseDef=j.def+holyPower.def;
     this.maxHp=this.baseHp;
     this.hp=this.maxHp;
     this.atk=this.baseAtk;
@@ -138,17 +146,42 @@ class Enemy{
 let distance=0;
 let rebirthCount=0;
 let holyPoint=0;
-let holyPower={hp:0, atk:0, def:0};
-
+let holyPower={hp:0,atk:0,def:0};
 let speed=1;
 let autoTimer=null;
 let currentEnemy=null;
 let party=Array.from({length:5},()=>new Character());
 
+/* ===== ログ ===== */
+function addLog(t){
+  log.innerHTML = t + "<br>" + log.innerHTML;
+}
+
+/* ===== 成長 ===== */
+function expToNext(lv){ return Math.floor(20*Math.pow(lv,1.5)); }
+
+function levelUp(c){
+  c.level++;
+  c.maxHp+=10;
+  c.atk+=3;
+  c.def+=2;
+  c.hp=c.maxHp;
+  addLog(`${c.job} Lv${c.level}に成長`);
+}
+
+function addExpAll(v){
+  party.forEach(c=>{
+    c.exp+=v;
+    while(c.exp>=expToNext(c.level)){
+      c.exp-=expToNext(c.level);
+      levelUp(c);
+    }
+  });
+}
+
 /* ===== バトル ===== */
 function calcDamage(c,e){
-  let atk=c.atk;
-  if(c.row==="back") atk*=1.2;
+  let atk=c.atk*(c.row==="back"?1.2:1);
   return Math.max(1,Math.floor(atk-e.def));
 }
 
@@ -168,11 +201,12 @@ function battle(enemy,end){
       enemy.hp-=calcDamage(c,enemy);
       if(enemy.hp<=0) break;
     }
-
     updateEnemyUI();
 
     if(enemy.hp<=0){
       clearInterval(it);
+      addLog("敵を撃破！");
+      addExpAll(10);
       reviveParty();
       end();
       return;
@@ -234,19 +268,23 @@ function toggleAuto(){
 }
 
 function changeSpeed(){
-  speed = speed===1 ? 2 : speed===2 ? 4 : speed===4 ? 8 : 1;
+  speed = speed===1?2:speed===2?4:speed===4?8:1;
   speedBtn.textContent=`倍速 ×${speed}`;
-  speedBtn.classList.add("active");
-  setTimeout(()=>speedBtn.classList.remove("active"),200);
 }
 
 /* ===== 転生 ===== */
 function rebirth(){
+  if(distance<100){
+    addLog("100m未満では転生できない");
+    return;
+  }
   rebirthCount++;
-  holyPoint+=5;
-  holyPower.hp+=5;
-  holyPower.atk+=2;
-  holyPower.def+=2;
+  const gain=Math.floor(distance/100);
+  holyPoint+=gain;
+  holyPower.hp+=gain*2;
+  holyPower.atk+=gain;
+  holyPower.def+=gain;
+  addLog(`転生！ 聖杯Pt +${gain}`);
   distance=0;
   party=Array.from({length:5},()=>new Character());
   updateUI();
@@ -261,6 +299,7 @@ const enemyText=document.getElementById("enemyText");
 const enemyHpBar=document.getElementById("enemyHpBar");
 const autoBtn=document.getElementById("autoBtn");
 const speedBtn=document.getElementById("speedBtn");
+const log=document.getElementById("log");
 
 updateUI();
 </script>
