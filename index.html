@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>聖杯オートRPG v1.6.0</title>
+<title>聖杯オートRPG v1.8.0</title>
 <style>
 body{ margin:0; background:#111; color:#eee; font-family:sans-serif; font-size:15px; padding:6px; }
 .version { position: absolute; top: 5px; right: 10px; font-size: 11px; color: #555; }
@@ -11,57 +11,58 @@ h2{margin:4px 0;font-size:20px; color:#f1c40f;}
 button{ width:100%; background:#333; color:#eee; border:1px solid #555; border-radius:6px; font-size:16px; padding:6px 0; margin-top:3px; cursor: pointer; }
 .toggleOn{background:#2ecc71;color:#000;font-weight:bold;}
 .dead{opacity:0.4; filter: grayscale(100%);}
-.partyRow{ font-size:13px; margin:5px 0; border-bottom: 1px solid #333; padding-bottom:3px; }
-.barWrap{ background:#333; height:6px; border-radius:3px; overflow:hidden; margin-top:3px; }
+.partyRow{ font-size:13px; margin:5px 0; border-bottom: 1px solid #333; padding-bottom:5px; }
+.hp-num { font-size: 11px; color: #ccc; float: right; }
+.barWrap{ background:#333; height:8px; border-radius:4px; overflow:hidden; margin-top:3px; clear: both; }
 .bar{background:#e74c3c; height:100%; transition: width 0.1s;}
-.log{ font-size:13px; height:130px; overflow-y:auto; background: #000; padding: 5px; display: flex; flex-direction: column-reverse; }
+.log{ font-size:13px; height:120px; overflow-y:auto; background: #000; padding: 5px; display: flex; flex-direction: column-reverse; }
 .skill-text { color: #3498db; font-weight: bold; }
-.lvup-text { color: #f1c40f; font-weight: bold; text-shadow: 0 0 5px #fff; }
-.drop-text { color: #f39c12; }
+.lvup-text { color: #f1c40f; font-weight: bold; }
+.unlock-text { color: #ff3e3e; font-weight: bold; font-size: 16px; text-align: center; }
+.amount-selector { display: flex; gap: 4px; margin-bottom: 8px; }
+.amount-btn { font-size: 12px; padding: 5px; background: #222; flex:1; border: 1px solid #444; color: #eee; }
+.amount-btn.active { background: #f1c40f; color: #000; border-color: #fff; }
+.stat-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 11px; margin-bottom: 5px; }
 .warp-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; margin-top:5px; }
 .warp-btn { font-size: 11px; padding: 4px 0; background: #222; }
-.amount-selector { display: flex; gap: 3px; margin-bottom: 5px; }
-.amount-btn { font-size: 11px; padding: 3px; background: #222; flex:1; }
-.amount-btn.active { background: #f1c40f; color: #000; }
 </style>
 </head>
 <body>
 
-<div class="version">v1.6.0 [Growth & Fix]</div>
+<div class="version">v1.8.0 [Persistent & Awakening]</div>
 <h2>聖杯オートRPG</h2>
 
 <div class="panel">
     <strong>階層: <span id="floor">1</span> / 1000</strong> (周回: <span id="loopCount">0</span>)<br>
-    聖杯Pt: <span id="holy" style="color:#f1c40f;">0</span>　撃破: <span id="kills">0</span>
+    聖杯Pt: <span id="holy" style="color:#f1c40f; font-weight:bold;">0</span> 
+    (討伐数: <span id="killsDisplay">0</span>)
     <div id="warpContainer" class="warp-grid"></div>
 </div>
 
 <div class="panel">
     <strong>聖杯強化</strong>
     <div class="amount-selector">
-        <button class="amount-btn active" onclick="setAmount(1)">x1</button>
-        <button class="amount-btn" onclick="setAmount(10)">x10</button>
-        <button class="amount-btn" onclick="setAmount(100)">x100</button>
-        <button class="amount-btn" onclick="setAmount('MAX')">MAX</button>
+        <button id="amt1" class="amount-btn active" onclick="setAmount(1)">x1</button>
+        <button id="amt10" class="amount-btn" onclick="setAmount(10)">x10</button>
+        <button id="amt100" class="amount-btn" onclick="setAmount(100)">x100</button>
+        <button id="amtMAX" class="amount-btn" onclick="setAmount('MAX')">MAX</button>
     </div>
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; font-size:11px;">
+    <div class="stat-row">
         <div>ATK: +<span id="b-atk">0</span> <button onclick="upgrade('atk')">強化</button></div>
         <div>DEF: +<span id="b-def">0</span> <button onclick="upgrade('def')">強化</button></div>
         <div>HP: +<span id="b-hp">0</span> <button onclick="upgrade('hp')">強化</button></div>
         <div>EXP: +<span id="b-exp">0</span>% <button onclick="upgrade('exp')">強化</button></div>
     </div>
+    <button id="autoUpgradeBtn" onclick="toggleAutoUpgrade()">自動振り分け OFF</button>
 </div>
 
 <div class="panel">
     <strong>敵: <span id="enemyName"></span></strong>
-    <div id="enemyText" style="font-size:11px"></div>
+    <span class="hp-num" id="enemyHpNum">0 / 0</span>
     <div class="barWrap"><div id="enemyHpBar" class="bar"></div></div>
 </div>
 
-<div class="panel">
-    <strong>パーティ (Lv / HP / 装備)</strong>
-    <div id="party"></div>
-</div>
+<div id="party"></div>
 
 <div class="panel log" id="log"></div>
 
@@ -73,48 +74,43 @@ button{ width:100%; background:#333; color:#eee; border:1px solid #555; border-r
 <script>
 const BATTLE_SPEED = 20; 
 const MAX_FLOOR = 1000;
+const SAVE_KEY = "HolyRPG_Persistent_Data"; // バージョン間で共通のキー
 
 let floor = 1, maxReachedFloor = 1, loopCount = 0, kills = 0, holy = 0;
 let bonus = {atk:0, def:0, hp:0, exp:0};
-let buyAmount = 1, autoIsOn = false;
+let buyAmount = 1, autoIsOn = false, autoUpgrade = false, heroUnlocked = false;
 let party = [], enemy = null;
-
-const CHAR_DATA = [
-    {name:"レオン", job:"せんし", icon:"⚔️"},
-    {name:"ミラ", job:"とうぞく", icon:"🗡️"},
-    {name:"アーク", job:"まほうつかい", icon:"🪄"},
-    {name:"セラ", job:"そうりょ", icon:"🕊️"}
-];
 
 const JOBS = {
     "せんし": { hp:150, atk:12, def:12, skills: [{name:"強撃", rate:0.25, power:2.5}] },
     "とうぞく": { hp:100, atk:11, def:6, skills: [{name:"急所突き", rate:0.3, power:3.0}] },
     "まほうつかい": { hp:80, atk:22, def:4, skills: [{name:"爆発魔法", rate:0.3, power:4.0}] },
-    "そうりょ": { hp:120, atk:8, def:8, skills: [{name:"ヒール", rate:0.25, power:0}] } 
+    "そうりょ": { hp:120, atk:8, def:8, skills: [{name:"ヒール", rate:0.25, power:0}] },
+    "勇者": { hp:250, atk:35, def:20, skills: [{name:"ギガスラッシュ", rate:0.35, power:5.0}] }
 };
 
 class Character {
-    constructor(d) {
-        this.name=d.name; this.job=d.job; this.icon=d.icon;
+    constructor(name, job, icon) {
+        this.name=name; this.job=job; this.icon=icon;
         this.level=1; this.exp=0; this.hp=100; this.maxHp=100;
         this.atk=10; this.def=5; this.eqAtk=0; this.eqDef=0; this.alive=true;
     }
     updateStats() {
         const j = JOBS[this.job];
-        this.maxHp = j.hp + (bonus.hp||0) + (this.level-1)*30; // 成長幅を拡大
-        this.atk = j.atk + (bonus.atk||0) + (this.level-1)*5;
-        this.def = j.def + (bonus.def||0) + (this.level-1)*3;
-        if(this.hp > this.maxHp || this.hp < 0) this.hp = this.maxHp;
+        // レベル上昇値 + 聖杯ボーナス + 10レベ毎のパッシブ覚醒(各+15%)
+        const awakeMult = 1 + Math.floor(this.level / 10) * 0.15;
+        this.maxHp = Math.floor((j.hp + (bonus.hp||0) + (this.level-1)*45) * awakeMult);
+        this.atk = Math.floor((j.atk + (bonus.atk||0) + (this.level-1)*7) * awakeMult);
+        this.def = Math.floor((j.def + (bonus.def||0) + (this.level-1)*5) * awakeMult);
     }
     gainExp(v) {
-        this.exp += v * (1 + bonus.exp * 0.1);
-        const next = 20 + this.level * 15;
+        this.exp += v * (1 + (bonus.exp||0) * 0.1);
+        const next = 30 + this.level * 25;
         if(this.exp >= next) {
-            this.level++;
-            this.exp = 0;
-            this.updateStats();
-            this.hp = this.maxHp;
-            addLog(`★${this.name} LvUP! (${this.level})`, "lvup-text");
+            this.level++; this.exp = 0;
+            addLog(`★${this.name} LvUP! [Lv${this.level}]`, "lvup-text");
+            if(this.level % 10 === 0) addLog(`>>> ${this.name}の能力が覚醒した！`, "skill-text");
+            this.updateStats(); this.hp = this.maxHp;
         }
     }
 }
@@ -125,14 +121,14 @@ function addLog(t, cls="") {
     if(cls) line.className = cls;
     line.innerHTML = t;
     lb.appendChild(line);
-    if(lb.childNodes.length > 30) lb.removeChild(lb.firstChild);
+    if(lb.childNodes.length > 25) lb.removeChild(lb.firstChild);
 }
 
 function updateUI() {
     document.getElementById("floor").textContent = floor;
     document.getElementById("loopCount").textContent = loopCount;
-    document.getElementById("kills").textContent = kills;
     document.getElementById("holy").textContent = holy;
+    document.getElementById("killsDisplay").textContent = kills;
     document.getElementById("b-atk").textContent = bonus.atk;
     document.getElementById("b-def").textContent = bonus.def;
     document.getElementById("b-hp").textContent = bonus.hp;
@@ -142,11 +138,14 @@ function updateUI() {
     pEl.innerHTML = "";
     party.forEach(c => {
         c.updateStats();
+        if(c.hp > c.maxHp) c.hp = c.maxHp;
         const row = document.createElement("div");
-        row.className = "partyRow " + (c.alive ? "" : "dead");
+        row.className = "panel partyRow " + (c.alive ? "" : "dead");
         const hpP = (c.hp / c.maxHp) * 100;
-        row.innerHTML = `<div>${c.icon}${c.name} Lv${c.level} <span style="font-size:10px; color:#777;">(攻+${c.eqAtk} 防+${c.eqDef})</span></div>
-                         <div class="barWrap"><div class="bar" style="width:${hpP}%"></div></div>`;
+        row.innerHTML = `
+            <div>${c.icon} ${c.name} [${c.job}] Lv${c.level} <span style="font-size:10px;">(ATK:${c.atk+c.eqAtk} DEF:${c.def+c.eqDef})</span></div>
+            <span class="hp-num">${Math.floor(c.hp)} / ${c.maxHp}</span>
+            <div class="barWrap"><div class="bar" style="width:${hpP}%"></div></div>`;
         pEl.appendChild(row);
     });
     updateWarpButtons();
@@ -159,60 +158,62 @@ function updateWarpButtons() {
     for(let i=1; i<=maxReachedFloor; i+=100) {
         const b = document.createElement("button");
         b.className = "warp-btn"; b.textContent = i + "F";
-        b.onclick = () => { if(!enemy){ floor = i; addLog(i + "Fへワープしました"); updateUI(); save(); }};
+        b.onclick = () => { if(!enemy){ floor = i; addLog(i + "Fへワープ"); updateUI(); save(); }};
         container.appendChild(b);
     }
 }
 
 function spawnEnemy() {
-    const prefix = ["凶暴な", "光り輝く", "汚れた", "虚無の", "紅蓮の", "漆黒の", "巨大な", "古代の"];
-    const base = ["スライム", "ゴブリン", "スケルトン", "ゴーレム", "デーモン", "ドラゴン"];
-    const name = prefix[Math.floor(Math.random()*prefix.length)] + base[Math.floor(Math.random()*base.length)];
-    const power = (1 + loopCount + floor/50);
-    const hp = (80 + floor*30) * power;
+    const pre = ["凶暴な", "古の", "聖なる", "深淵の", "黄金の", "闇の"];
+    const suf = ["ドラゴン", "デーモン", "キマイラ", "大蛇", "魔神"];
+    const name = pre[Math.floor(Math.random()*pre.length)] + suf[Math.floor(Math.random()*suf.length)];
+    const p = (1 + loopCount + floor/80);
     enemy = { 
         name: (floor%10===0 ? "【BOSS】"+name : name),
-        maxHp: hp, hp: hp, 
-        atk: (8 + floor*3) * power, 
-        def: (4 + floor*1.2) * power 
+        maxHp: (120 + floor*50) * p, hp: 0, 
+        atk: (12 + floor*5) * p, 
+        def: (6 + floor*3) * p 
     };
+    enemy.hp = enemy.maxHp;
     updateEnemyUI();
 }
 
 function battleLoop() {
     const it = setInterval(() => {
         if(!enemy) { clearInterval(it); return; }
-        
         party.forEach(c => {
             if(!c.alive || !enemy || enemy.hp <= 0) return;
             const j = JOBS[c.job];
             if(Math.random() < j.skills[0].rate) {
                 if(c.job === "そうりょ") {
-                    party.forEach(m => { if(m.alive) m.hp = Math.min(m.maxHp, m.hp + (m.maxHp*0.3)); });
-                    addLog(`${c.icon} 祈りの光(全体回復)`, "skill-text");
+                    party.forEach(m => { if(m.alive) m.hp = Math.min(m.maxHp, m.hp + (m.maxHp*0.4)); });
+                    addLog(`${c.icon} 奇跡の祈り`, "skill-text");
                 } else {
-                    let sdmg = Math.max(1, (c.atk + c.eqAtk) * j.skills[0].power - enemy.def);
-                    enemy.hp -= sdmg;
-                    addLog(`${c.icon}${j.skills[0].name}! ${Math.floor(sdmg)}ダメージ`, "skill-text");
+                    let d = Math.max(1, (c.atk + c.eqAtk) * j.skills[0].power - enemy.def);
+                    enemy.hp -= d;
+                    addLog(`${c.icon}${j.skills[0].name}!`, "skill-text");
                 }
             } else {
                 enemy.hp -= Math.max(1, (c.atk + c.eqAtk) - enemy.def);
             }
 
             if(enemy.hp <= 0) {
-                enemy.hp = 0; addLog(`${enemy.name}を撃破`);
+                enemy.hp = 0; clearInterval(it);
+                addLog(`${enemy.name}を討伐！`);
                 kills++;
-                party.forEach(char => char.gainExp(15)); // 経験値を多めに
-                if(Math.random() < 0.25) {
-                    const t = party[Math.floor(Math.random()*4)];
-                    const val = Math.floor(Math.random()*(floor/3 + loopCount*30))+1;
-                    if(Math.random()>0.5) { if(val > t.eqAtk){t.eqAtk=val; addLog(`武器ドロップ+${val}`,"drop-text");}}
-                    else { if(val > t.eqDef){t.eqDef=val; addLog(`防具ドロップ+${val}`,"drop-text");}}
+                if(kills % 10 === 0) { holy++; addLog("聖杯Pt +1", "lvup-text"); if(autoUpgrade) autoDistribute(); }
+                party.forEach(char => char.gainExp(25));
+                
+                // 初めて100層を突破したら勇者解放
+                if(floor === 100 && !heroUnlocked) {
+                    heroUnlocked = true;
+                    party[0].job = "勇者"; party[0].icon = "👑";
+                    addLog("!! 伝説の勇者が覚醒した !!", "unlock-text");
                 }
-                if(floor >= MAX_FLOOR) { floor = 1; loopCount++; addLog("★伝説の1000層踏破！", "lvup-text"); }
-                else { floor++; }
+
+                if(floor >= MAX_FLOOR) { floor = 1; loopCount++; } else { floor++; }
                 if(floor > maxReachedFloor) maxReachedFloor = floor;
-                clearInterval(it); enemy = null; save();
+                enemy = null; save();
                 if(autoIsOn) setTimeout(stepDungeon, 100);
                 updateUI();
             }
@@ -221,13 +222,12 @@ function battleLoop() {
         if(enemy) {
             const target = party.find(c => c.alive);
             if(!target) {
-                clearInterval(it); 
-                addLog(`全滅... 10階層戻ります`, "drop-text");
+                clearInterval(it); addLog(`敗退... 10F後退`, "lvup-text");
                 floor = Math.max(1, floor - 10);
                 party.forEach(c => { c.hp = c.maxHp; c.alive = true; });
-                enemy = null; save();
+                enemy = null; updateUI(); save();
                 if(autoIsOn) setTimeout(stepDungeon, 500);
-                updateUI(); return;
+                return;
             }
             let eDmg = Math.max(1, enemy.atk - (target.def + target.eqDef));
             target.hp -= eDmg; if(target.hp <= 0) { target.hp = 0; target.alive = false; }
@@ -239,42 +239,61 @@ function battleLoop() {
 function updateEnemyUI() {
     if(!enemy) return;
     document.getElementById("enemyName").textContent = enemy.name;
-    document.getElementById("enemyText").textContent = `HP: ${Math.floor(enemy.hp)} / ${Math.floor(enemy.maxHp)}`;
+    document.getElementById("enemyHpNum").textContent = `${Math.floor(enemy.hp)} / ${Math.floor(enemy.maxHp)}`;
     document.getElementById("enemyHpBar").style.width = (enemy.hp/enemy.maxHp*100) + "%";
 }
 
 function stepDungeon() { if(!enemy){ spawnEnemy(); battleLoop(); } }
-function toggleAuto() { autoIsOn = !autoIsOn; document.getElementById("mainAutoBtn").className = autoIsOn ? "toggleOn" : ""; document.getElementById("mainAutoBtn").textContent = autoIsOn?"オート中":"オート開始"; if(autoIsOn) stepDungeon(); }
-function setAmount(a) { buyAmount = a; document.querySelectorAll('.amount-btn').forEach(b => b.classList.toggle('active', b.textContent.includes(a))); }
+function toggleAuto() { autoIsOn = !autoIsOn; document.getElementById("mainAutoBtn").className = autoIsOn ? "toggleOn" : ""; document.getElementById("mainAutoBtn").textContent = autoIsOn?"停止":"オート開始"; if(autoIsOn) stepDungeon(); }
+function setAmount(a) { 
+    buyAmount = a; 
+    ["1", "10", "100", "MAX"].forEach(v => {
+        document.getElementById("amt"+v).classList.toggle("active", a === (v === "MAX" ? "MAX" : parseInt(v)));
+    });
+}
 function upgrade(t) {
     let cost = (buyAmount === 'MAX') ? holy : buyAmount;
     if(holy < cost || cost <= 0) return;
     holy -= cost;
-    bonus[t] += (t === "hp" ? cost * 50 : cost * 10); // 強化幅も拡大
+    if(t === "hp") bonus.hp += cost * 50;
+    else if(t === "exp") bonus.exp += cost;
+    else bonus[t] += cost * 10;
     updateUI(); save();
 }
 
+function toggleAutoUpgrade() { autoUpgrade = !autoUpgrade; document.getElementById("autoUpgradeBtn").className = autoUpgrade ? "toggleOn" : ""; }
+function autoDistribute() { const keys = ["atk", "def", "hp", "exp"]; upgrade(keys[Math.floor(Math.random()*4)]); }
+
 function save() {
-    const data = { floor, maxReachedFloor, loopCount, kills, holy, bonus, party: party.map(c => ({
-        level: c.level, exp: c.exp, hp: c.hp, eqAtk: c.eqAtk, eqDef: c.eqDef
+    const data = { floor, maxReachedFloor, loopCount, kills, holy, bonus, autoUpgrade, heroUnlocked, party: party.map(c => ({
+        name: c.name, job: c.job, icon: c.icon, level: c.level, exp: c.exp, hp: c.hp, eqAtk: c.eqAtk, eqDef: c.eqDef
     }))};
-    localStorage.setItem("holyRPG_v160", JSON.stringify(data));
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
 }
 
 function load() {
-    party = CHAR_DATA.map(d => new Character(d));
-    const saved = localStorage.getItem("holyRPG_v160");
+    const saved = localStorage.getItem(SAVE_KEY);
     if(saved) {
         const d = JSON.parse(saved);
         floor = d.floor || 1; maxReachedFloor = d.maxReachedFloor || 1;
         loopCount = d.loopCount || 0; kills = d.kills || 0;
-        holy = d.holy || 0; bonus = d.bonus || bonus;
-        d.party.forEach((p, i) => {
-            if(party[i]){
-                party[i].level = p.level; party[i].exp = p.exp; party[i].hp = p.hp;
-                party[i].eqAtk = p.eqAtk; party[i].eqDef = p.eqDef;
-            }
+        holy = d.holy || 0; bonus = d.bonus || {atk:0, def:0, hp:0, exp:0};
+        autoUpgrade = d.autoUpgrade || false;
+        heroUnlocked = d.heroUnlocked || false;
+        if(autoUpgrade) document.getElementById("autoUpgradeBtn").className = "toggleOn";
+        party = d.party.map(p => {
+            let c = new Character(p.name, p.job, p.icon);
+            c.level = p.level; c.exp = p.exp; c.hp = p.hp;
+            c.eqAtk = p.eqAtk; c.eqDef = p.eqDef;
+            return c;
         });
+    } else {
+        party = [
+            new Character("レオン", "せんし", "⚔️"),
+            new Character("ミラ", "とうぞく", "🗡️"),
+            new Character("アーク", "まほうつかい", "🪄"),
+            new Character("セラ", "そうりょ", "🕊️")
+        ];
     }
 }
 
