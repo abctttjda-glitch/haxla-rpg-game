@@ -2,61 +2,73 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>聖杯オートRPG v2.2.0</title>
+<title>聖杯オートRPG v2.4.0</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <style>
 :root { --main-bg: #111; --panel-bg: #1e1e1e; --accent: #f1c40f; --text: #eee; }
-body { margin:0; background:var(--main-bg); color:var(--text); font-family:sans-serif; font-size:14px; padding:4px; height:100vh; overflow:hidden; display:flex; flex-direction:column; }
-.panel { background:var(--panel-bg); border:1px solid #444; border-radius:6px; padding:4px; margin-bottom:4px; }
-button { background:#333; color:#eee; border:1px solid #555; border-radius:4px; cursor:pointer; font-size:14px; }
+* { touch-action: manipulation; box-sizing: border-box; }
+body { 
+    margin:0; background:var(--main-bg); color:var(--text); font-family:sans-serif; font-size:13px; padding:2px;
+    height:100vh; overflow:hidden; display:flex; flex-direction:column;
+}
+.panel { background:var(--panel-bg); border:1px solid #444; border-radius:4px; padding:3px; margin-bottom:2px; }
+button { background:#333; color:#eee; border:1px solid #555; border-radius:4px; cursor:pointer; font-size:12px; }
 .active { background:var(--accent) !important; color:#000 !important; font-weight:bold; }
 .toggleOn { background:#2ecc71; color:#000; font-weight:bold; }
 
-/* 上部情報 */
-.header-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 2px; }
-
-/* 敵パネル */
-.enemy-panel { display: flex; align-items: center; gap: 8px; padding: 4px 8px; }
-.hp-bar-outer { flex-grow: 1; background:#333; height:12px; border-radius:6px; overflow:hidden; position:relative; }
+/* ヘッダー・敵パネル */
+.header-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
+.enemy-panel { display: flex; align-items: center; gap: 5px; padding: 2px 5px; height: 22px; }
+.hp-bar-outer { flex-grow: 1; background:#333; height:10px; border-radius:5px; overflow:hidden; position:relative; }
 .hp-bar-inner { background:#e74c3c; height:100%; width:0%; transition: width 0.1s; }
-.hp-text { position:absolute; width:100%; text-align:center; font-size:10px; font-weight:bold; top:0; }
+.hp-text { position:absolute; width:100%; text-align:center; font-size:9px; font-weight:bold; top:-1px; }
 
-/* メインコンテンツ（パーティ＆ログ） */
-.main-content { display: grid; grid-template-columns: 1.3fr 1fr; gap: 4px; flex-grow: 1; min-height: 0; }
-.party-list { overflow-y: hidden; }
-.char-card { border-bottom: 1px solid #333; padding: 2px 0; font-size: 12px; }
-.eq-row { font-size: 10px; color: #aaa; white-space: nowrap; overflow: hidden; }
-
-/* ログ（スリム化） */
-.log { background:#000; padding:4px; overflow-y:auto; display:flex; flex-direction:column-reverse; border:1px solid #444; border-radius:4px; font-size: 11px; line-height: 1.2; }
-.drop-msg { color: #f39c12; font-weight: bold; }
-.skill-msg { color: #3498db; }
+/* メイン（パーティ＆ログ） */
+.main-content { display: grid; grid-template-columns: 1.4fr 1fr; gap: 2px; flex: 1; min-height: 0; }
+.party-list { overflow-y: hidden; display: flex; flex-direction: column; justify-content: space-around; }
+.char-card { border-bottom: 1px solid #333; padding: 1px 0; }
+.char-info { display:flex; justify-content:space-between; font-weight:bold; font-size:11px; }
+.job-label { color: #aaa; font-size: 9px; margin-left: 2px; }
+.eq-row { font-size: 9px; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.log { background:#000; padding:2px; overflow-y:auto; display:flex; flex-direction:column-reverse; border:1px solid #333; border-radius:4px; font-size: 10px; line-height: 1.1; }
 
 /* 強化セクション */
-.upgrade-section { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
-.stat-btn { display: flex; flex-direction: column; align-items: center; padding: 4px 0; font-size: 11px; }
+.upgrade-box { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; margin-top: 1px; }
+.stat-btn { display: flex; flex-direction: column; align-items: center; padding: 4px 0; font-size: 10px; }
 
-/* フッター操作 */
-.footer-btns { display: grid; grid-template-columns: 1fr 2fr; gap: 4px; margin-top: 4px; }
-.footer-btns button { padding: 10px 0; font-weight: bold; }
+/* 下部操作 */
+.footer-btns { display: grid; grid-template-columns: 1fr 2fr; gap: 2px; margin-top: 2px; }
+.footer-btns button { padding: 10px 0; font-weight: bold; font-size: 15px; }
+
+/* カジノモーダル */
+#casinoModal {
+    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.85); z-index: 100; justify-content: center; align-items: center;
+}
+.modal-content {
+    background: #2c3e50; border: 2px solid var(--accent); border-radius: 12px;
+    width: 85%; max-width: 300px; padding: 20px; text-align: center;
+}
+.slot-machine { font-size: 40px; margin: 15px 0; letter-spacing: 5px; background: #000; padding: 10px; border-radius: 8px; }
+#casinoResult { margin: 10px 0; font-weight: bold; color: var(--accent); min-height: 1.2em; }
 </style>
 </head>
 <body>
 
 <div class="header-grid">
-    <div class="panel" style="font-size:12px;">
-        <strong><span id="floor">1</span>F</strong> <small>(<span id="holy">0</span>Pt)</small><br>
-        🐾Lv<span id="petLv">1</span> <span id="killCount">0/10</span>
+    <div class="panel">
+        <strong><span id="floor">1</span>F</strong> <small>(<span id="holy">0</span>Pt)</small>
+        <div style="font-size:9px; color:#a29bfe;">🐾Lv<span id="petLv">1</span> / <span id="killCount">0/10</span></div>
     </div>
-    <div class="panel" style="display:grid; grid-template-columns:1fr 1fr; gap:2px;">
-        <button onclick="playCasino()" style="font-size:10px;">🎰カジノ</button>
-        <button onclick="warpMax()" style="font-size:10px;">Warp</button>
-        <button id="autoUpBtn" style="font-size:10px; grid-column:span 2" onclick="toggleAutoUpgrade()">自動強化:OFF</button>
+    <div class="panel" style="display:grid; grid-template-columns:1fr 1fr; gap:1px;">
+        <button onclick="openCasino()" style="font-size:11px; background:#4b4b4b;">🎰 カジノ</button>
+        <button onclick="warpMax()" style="font-size:11px;">Warp</button>
+        <button id="autoUpBtn" style="font-size:9px; grid-column:span 2" onclick="toggleAutoUpgrade()">自動強化:OFF</button>
     </div>
 </div>
 
 <div class="panel enemy-panel">
-    <div style="font-size:12px; font-weight:bold; min-width:50px;" id="enemyName">---</div>
+    <div style="font-size:10px; font-weight:bold; min-width:40px;" id="enemyName">---</div>
     <div class="hp-bar-outer">
         <div id="enemyHpBar" class="hp-bar-inner"></div>
         <div class="hp-text" id="enemyHpNum">0/0</div>
@@ -69,16 +81,16 @@ button { background:#333; color:#eee; border:1px solid #555; border-radius:4px; 
 </div>
 
 <div class="panel">
-    <div style="display:flex; justify-content:space-around; margin-bottom:4px;">
-        <button id="amt1" style="width:28%" onclick="setAmount(1)">x1</button>
-        <button id="amt10" style="width:28%" onclick="setAmount(10)">x10</button>
-        <button id="amtMAX" style="width:28%" onclick="setAmount('MAX')">MAX</button>
+    <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+        <button id="amt1" style="width:32%; padding:3px;" onclick="setAmount(1)">x1</button>
+        <button id="amt10" style="width:32%; padding:3px;" onclick="setAmount(10)">x10</button>
+        <button id="amtMAX" style="width:32%; padding:3px;" onclick="setAmount('MAX')">MAX</button>
     </div>
-    <div class="upgrade-section">
-        <button class="stat-btn" onclick="upgrade('atk')"><span>攻</span><strong>+<span id="b-atk">0</span></strong></button>
-        <button class="stat-btn" onclick="upgrade('def')"><span>防</span><strong>+<span id="b-def">0</span></strong></button>
-        <button class="stat-btn" onclick="upgrade('hp')"><span>命</span><strong>+<span id="b-hp">0</span></strong></button>
-        <button class="stat-btn" onclick="upgrade('exp')"><span>経</span><strong>+<span id="b-exp">0</span></strong></button>
+    <div class="upgrade-box">
+        <button class="stat-btn" onclick="upgrade('atk')">攻+<span id="b-atk">0</span></button>
+        <button class="stat-btn" onclick="upgrade('def')">防+<span id="b-def">0</span></button>
+        <button class="stat-btn" onclick="upgrade('hp')">命+<span id="b-hp">0</span></button>
+        <button class="stat-btn" onclick="upgrade('exp')">経+<span id="b-exp">0</span></button>
     </div>
 </div>
 
@@ -87,22 +99,34 @@ button { background:#333; color:#eee; border:1px solid #555; border-radius:4px; 
     <button id="mainAutoBtn" onclick="toggleAuto()">オート開始</button>
 </div>
 
+<div id="casinoModal">
+    <div class="modal-content">
+        <h3 style="margin:0; color:var(--accent);">聖杯カジノ</h3>
+        <p style="font-size:11px; margin:5px 0;">1回 1聖杯Pt で挑戦！</p>
+        <div class="slot-machine" id="slot">❓ ❓ ❓</div>
+        <div id="casinoResult">幸運を祈る...！</div>
+        <button onclick="playCasino()" id="spinBtn" style="width:100%; padding:10px; background:#27ae60; font-weight:bold; margin-bottom:10px;">スピン！</button>
+        <button onclick="closeCasino()" style="width:100%; background:#c0392b;">閉じる</button>
+    </div>
+</div>
+
 <script>
-const SAVE_KEY = "HolyRPG_Persistent_Data_v2.2";
+const SAVE_KEY = "HolyRPG_Persistent_Data_v2.2"; 
 let floor=1, maxReachedFloor=1, loopCount=0, kills=0, holy=0, petLv=1;
 let bonus={atk:0, def:0, hp:0, exp:0}, buyAmount=1, autoIsOn=false, autoUpgrade=false, heroUnlocked=false;
 let party=[], enemy=null;
+
+const JOB_DATA = {"せんし":{h:150,a:12,d:12},"とうぞく":{h:100,a:11,d:6},"まほうつかい":{h:80,a:22,d:4},"そうりょ":{h:120,a:8,d:8},"勇者":{h:250,a:35,d:20}};
 
 class Character {
     constructor(name, job, icon) {
         this.name=name; this.job=job; this.icon=icon;
         this.level=1; this.exp=0; this.hp=100; this.maxHp=100;
         this.atk=10; this.def=5; this.alive=true;
-        this.weapon = { name: "木の棒", val: 0 };
-        this.armor = { name: "布の服", val: 0 };
+        this.weapon={name:"木の棒",val:0}; this.armor={name:"布の服",val:0};
     }
     updateStats() {
-        const j = {"せんし":{h:150,a:12,d:12},"とうぞく":{h:100,a:11,d:6},"まほうつかい":{h:80,a:22,d:4},"そうりょ":{h:120,a:8,d:8},"勇者":{h:250,a:35,d:20}}[this.job];
+        const j = JOB_DATA[this.job]||JOB_DATA["せんし"];
         const awake = 1 + Math.floor(this.level/10)*0.15;
         this.maxHp = Math.floor((j.h + (bonus.hp||0) + (this.level-1)*45) * awake);
         this.atk = Math.floor((j.a + (bonus.atk||0) + (this.level-1)*7 + this.weapon.val) * awake);
@@ -114,7 +138,7 @@ class Character {
 function addLog(t, cls="") {
     const lb = document.getElementById("log");
     const line = document.createElement("div");
-    if(cls) line.className = cls;
+    if(cls) line.style.color = (cls==="drop-msg") ? "#f39c12" : "#3498db";
     line.innerText = t;
     lb.appendChild(line);
     if(lb.childNodes.length > 20) lb.removeChild(lb.firstChild);
@@ -136,30 +160,55 @@ function updateUI() {
         c.updateStats();
         const card = document.createElement("div");
         card.className = "char-card " + (c.alive ? "" : "dead");
-        card.innerHTML = `
-            <div style="display:flex; justify-content:space-between; font-weight:bold;">
-                <span>${c.icon}${c.name} <small>Lv${c.level}</small></span>
-                <span>HP:${Math.floor(c.hp)}</span>
-            </div>
-            <div class="eq-row">⚔️${c.weapon.name}(+${c.weapon.val})</div>
-            <div class="eq-row">🛡️${c.armor.name}(+${c.armor.val})</div>`;
+        card.innerHTML = `<div class="char-info"><span>${c.icon}${c.name}<span class="job-label">${c.job}</span></span><span>HP:${Math.floor(c.hp)}</span></div>
+        <div class="eq-row">⚔️${c.weapon.name}+${c.weapon.val} / 🛡️${c.armor.name}+${c.armor.val}</div>`;
         pEl.appendChild(card);
     });
 }
 
-function dropGear() {
-    const target = party[Math.floor(Math.random()*party.length)];
-    const isWep = Math.random() > 0.5;
-    const mats = ["鉄","鋼","銀","金","魔","神"];
-    const mat = mats[Math.min(5, Math.floor(floor/150))];
-    const val = Math.floor(floor * 1.5 + Math.random()*floor);
-    if(isWep && val > target.weapon.val) {
-        target.weapon = { name: mat+"の剣", val: val };
-        addLog(`🎁${target.name}:武器UP`, "drop-msg");
-    } else if(!isWep && val > target.armor.val) {
-        target.armor = { name: mat+"の鎧", val: val };
-        addLog(`🎁${target.name}:防具UP`, "drop-msg");
-    }
+function openCasino() { document.getElementById("casinoModal").style.display = "flex"; }
+function closeCasino() { document.getElementById("casinoModal").style.display = "none"; }
+
+function playCasino() {
+    if(holy < 1) { document.getElementById("casinoResult").innerText = "聖杯Ptが足りません！"; return; }
+    holy--;
+    updateUI();
+    const spinBtn = document.getElementById("spinBtn");
+    spinBtn.disabled = true;
+    const slot = document.getElementById("slot");
+    const resultText = document.getElementById("casinoResult");
+    
+    let timer = 0;
+    const interval = setInterval(() => {
+        const items = ["💎","🔔","🍎","🍒","⭐","💀"];
+        slot.innerText = items[Math.floor(Math.random()*6)] + " " + items[Math.floor(Math.random()*6)] + " " + items[Math.floor(Math.random()*6)];
+        timer++;
+        if(timer > 10) {
+            clearInterval(interval);
+            const r = Math.random();
+            if(r < 0.05) { // ジャックポット
+                slot.innerText = "⭐ ⭐ ⭐"; resultText.innerText = "超絶大当り！聖杯Pt +20"; holy += 20; addLog("🎰カジノ:超大当り!");
+            } else if(r < 0.2) { // 攻撃UP
+                slot.innerText = "💎 ⚔️ 💎"; resultText.innerText = "武器強化！全攻撃力 +50"; bonus.atk += 50; addLog("🎰カジノ:攻撃UP");
+            } else if(r < 0.4) { // 経験値UP
+                slot.innerText = "🍎 📖 🍎"; resultText.innerText = "知恵の実！経験倍率 +5"; bonus.exp += 5; addLog("🎰カジノ:経験UP");
+            } else if(r < 0.6) { // Pt還元
+                slot.innerText = "🍒 🍒 🍒"; resultText.innerText = "小当り！聖杯Pt +2"; holy += 2; addLog("🎰カジノ:小当り");
+            } else {
+                slot.innerText = "💀 🍃 💀"; resultText.innerText = "ハズレ...";
+            }
+            spinBtn.disabled = false;
+            updateUI(); save();
+        }
+    }, 100);
+}
+
+function stepDungeon() {
+    if(enemy) return;
+    const p = (1 + loopCount + floor/100);
+    enemy = { name: (floor%10===0?"BOSS":"MON"), maxHp:(200+floor*60)*p, hp:0, atk:(15+floor*7)*p, def:(10+floor*4)*p };
+    enemy.hp = enemy.maxHp;
+    battleLoop();
 }
 
 function battleLoop() {
@@ -167,19 +216,18 @@ function battleLoop() {
         if(!enemy) { clearInterval(it); return; }
         party.forEach(c => {
             if(!c.alive || !enemy || enemy.hp <= 0) return;
-            if(Math.random()<0.1) { enemy.hp -= (petLv*15); addLog("🐾ペット追撃", "skill-msg"); }
+            if(Math.random()<0.05) { enemy.hp -= (petLv*15); addLog("🐾追撃", "skill-msg"); }
             let dmg = Math.max(1, c.atk - enemy.def);
-            if(Math.random()<0.2) { dmg*=2; addLog(`${c.icon}スキル`, "skill-msg"); }
+            if(Math.random()<0.1) { dmg*=2; addLog(`${c.icon}技`, "skill-msg"); }
             enemy.hp -= dmg;
-
             if(enemy.hp <= 0) {
                 enemy.hp = 0; clearInterval(it); kills++;
                 if(kills%10===0) { holy++; if(autoUpgrade) autoDistribute(); }
                 if(kills%50===0) petLv++;
-                if(Math.random()<0.3) dropGear();
+                if(Math.random()<0.2) dropGear();
                 party.forEach(char => {
                     char.exp += 20 * (1+bonus.exp*0.1);
-                    if(char.exp >= 50){ char.level++; char.exp=0; char.hp=char.maxHp; addLog(`★${char.name} Lv${char.level}`); }
+                    if(char.exp >= 50){ char.level++; char.exp=0; char.hp=char.maxHp; }
                 });
                 if(floor===100 && !heroUnlocked){ heroUnlocked=true; party[0].job="勇者"; party[0].icon="👑"; addLog("👑勇者覚醒！"); }
                 if(floor>=1000){ floor=1; loopCount++; } else { floor++; }
@@ -200,12 +248,14 @@ function battleLoop() {
     }, 50);
 }
 
-function stepDungeon() {
-    if(enemy) return;
-    const p = (1 + loopCount + floor/100);
-    enemy = { name: (floor%10===0?"BOSS":"MON"), maxHp:(200+floor*60)*p, hp:0, atk:(15+floor*7)*p, def:(10+floor*4)*p };
-    enemy.hp = enemy.maxHp;
-    battleLoop();
+function dropGear() {
+    const target = party[Math.floor(Math.random()*party.length)];
+    const isWep = Math.random() > 0.5;
+    const mats = ["鉄","鋼","銀","金","魔","神"];
+    const mat = mats[Math.min(5, Math.floor(floor/150))];
+    const val = Math.floor(floor * 1.5 + Math.random()*floor);
+    if(isWep && val > target.weapon.val) { target.weapon = { name: mat+"の剣", val: val }; addLog(`🎁${target.name}:武器UP`, "drop-msg"); }
+    else if(!isWep && val > target.armor.val) { target.armor = { name: mat+"の鎧", val: val }; addLog(`🎁${target.name}:防具UP`, "drop-msg"); }
 }
 
 function toggleAuto() { autoIsOn = !autoIsOn; document.getElementById("mainAutoBtn").className = autoIsOn ? "toggleOn" : ""; if(autoIsOn) stepDungeon(); }
@@ -218,7 +268,6 @@ function upgrade(t) {
 function toggleAutoUpgrade() { autoUpgrade = !autoUpgrade; document.getElementById("autoUpBtn").className = autoUpgrade ? "toggleOn" : ""; }
 function autoDistribute() { upgrade(['atk','def','hp','exp'][Math.floor(Math.random()*4)]); }
 function warpMax() { if(!enemy){ floor = maxReachedFloor; updateUI(); }}
-function playCasino() { if(holy<1)return; holy--; if(Math.random()<0.1){ holy+=10; addLog("🎰大当り!+10Pt");} else if(Math.random()<0.3){ bonus.atk+=5; updateUI(); addLog("🎰攻UP");} else addLog("🎰ハズレ"); save(); }
 
 function save() {
     const data = { floor, maxReachedFloor, loopCount, kills, holy, bonus, petLv, heroUnlocked, party: party.map(c => ({
@@ -230,7 +279,7 @@ function load() {
     const saved = localStorage.getItem(SAVE_KEY);
     if(saved) {
         const d = JSON.parse(saved);
-        floor=d.floor; maxReachedFloor=d.maxReachedFloor; loopCount=d.loopCount; kills=d.kills; holy=d.holy; bonus=d.bonus; petLv=d.petLv||1; heroUnlocked=d.heroUnlocked;
+        floor=d.floor||1; maxReachedFloor=d.maxReachedFloor||1; loopCount=d.loopCount||0; kills=d.kills||0; holy=d.holy||0; bonus=d.bonus||{atk:0,def:0,hp:0,exp:0}; petLv=d.petLv||1; heroUnlocked=d.heroUnlocked||false;
         party = d.party.map(p => { 
             let c=new Character(p.name, p.job, p.icon); c.level=p.level; c.hp=p.hp; 
             c.weapon=p.weapon; c.armor=p.armor; return c; 
